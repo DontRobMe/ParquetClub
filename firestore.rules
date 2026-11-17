@@ -1,0 +1,41 @@
+rules_version = '2';
+// Règles du cahier des charges (partie 4) : les droits sont vérifiés par le serveur, pas par l'app.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    // Un compte désactivé perd ses droits tout de suite, sans attendre la fin de sa session.
+    function active() {
+      return signedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('disabled', false) == false;
+    }
+    function isAdmin() { return active() && request.auth.token.role == 'admin'; }
+    function isOwner(id) { return active() && request.auth.uid == id; }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow update: if isOwner(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmToken']);
+    }
+
+    match /partners/{id} {
+      allow read: if true;                       // annuaire public (F8)
+      allow update: if isOwner(id) || isAdmin();
+      allow create, delete: if false;            // Cloud Functions uniquement
+
+      match /private/{doc} {                     // téléphone personnel (F7)
+        allow read: if isOwner(id) || isAdmin();
+        allow write: if isOwner(id);
+      }
+    }
+
+    match /events/{eventId} {
+      allow read: if active();                   // réservé aux comptes connectés
+      allow write: if isAdmin();
+
+      match /responses/{uid} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow write: if isOwner(uid);
+      }
+    }
+  }
+}
