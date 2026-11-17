@@ -47,6 +47,25 @@ class EventsCubit extends Cubit<EventsState> {
   Future<void> repondre(String eventId, {required bool vient, int nbPersonnes = 1}) =>
       _repository.repondre(eventId, vient: vient, nbPersonnes: vient ? nbPersonnes : 0);
 
+  /// F10. Une modification de date ou de lieu passe l'événement au statut « modifié ».
+  /// Même règle que `repondre` : l'écran n'attend pas le serveur.
+  Future<void> enregistrer(Event event, {Event? ancien}) {
+    final change = ancien != null && (ancien.date != event.date || ancien.lieu != event.lieu);
+    return _repository.enregistrer(
+      Event(
+        id: event.id,
+        titre: event.titre,
+        type: event.type,
+        date: event.date,
+        lieu: event.lieu,
+        description: event.description,
+        statut: change ? EventStatut.modifie : (ancien?.statut ?? EventStatut.prevu),
+      ),
+    );
+  }
+
+  Future<void> annuler(String eventId) => _repository.annuler(eventId);
+
   void _suivreReponses() {
     final ids = {for (final e in _evenements) e.id};
     for (final id in _abonnementsReponses.keys.toList()) {

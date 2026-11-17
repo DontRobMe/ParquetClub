@@ -28,6 +28,10 @@ service cloud.firestore {
       }
     }
 
+    match /adminLogs/{id} {                      // journal (F18) : écrit par les Cloud Functions
+      allow read: if isAdmin();
+    }
+
     match /events/{eventId} {
       allow read: if active();                   // réservé aux comptes connectés
       allow write: if isAdmin();

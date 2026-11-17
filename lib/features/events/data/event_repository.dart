@@ -41,6 +41,16 @@ class EventRepository {
   Future<void> repondre(String eventId, {required bool vient, required int nbPersonnes}) =>
       _reponse(eventId).set({'vient': vient, 'nbPersonnes': nbPersonnes, 'updatedAt': FieldValue.serverTimestamp()});
 
+  /// F10, bureau uniquement (règle `isAdmin`). Un identifiant vide crée l'événement.
+  /// La Cloud Function `notifierEvenement` envoie ensuite le push aux partenaires.
+  Future<void> enregistrer(Event event) {
+    final evenements = _firestore.collection('events');
+    return (event.id.isEmpty ? evenements.doc() : evenements.doc(event.id)).set(event.toMap());
+  }
+
+  Future<void> annuler(String eventId) =>
+      _firestore.collection('events').doc(eventId).update({'statut': EventStatut.annule.name});
+
   DocumentReference<Map<String, dynamic>> _reponse(String eventId) =>
       _firestore.collection('events').doc(eventId).collection('responses').doc(_uid);
 }

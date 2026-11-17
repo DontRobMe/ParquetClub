@@ -25,6 +25,15 @@ class Event {
 
   bool get annule => statut == EventStatut.annule;
 
+  Map<String, Object> toMap() => {
+    'titre': titre,
+    'type': type,
+    'date': Timestamp.fromDate(date),
+    'lieu': lieu,
+    'description': description,
+    'statut': statut.name,
+  };
+
   factory Event.fromMap(String id, Map<String, dynamic> data) {
     String texte(String cle) => data[cle] is String ? data[cle] as String : '';
     final date = data['date'];
