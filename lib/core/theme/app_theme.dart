@@ -83,15 +83,24 @@ abstract final class AppTheme {
       cardTheme: CardThemeData(
         color: AppColors.blanc,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: radius, side: const BorderSide(color: AppColors.contour)),
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: const BorderSide(color: AppColors.contour),
+        ),
       ),
       // Formulaire lisible : libellé toujours visible au-dessus du champ.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.blanc,
         floatingLabelBehavior: FloatingLabelBehavior.always,
-        border: OutlineInputBorder(borderRadius: radius, borderSide: const BorderSide(color: AppColors.contour)),
-        enabledBorder: OutlineInputBorder(borderRadius: radius, borderSide: const BorderSide(color: AppColors.contour)),
+        border: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: const BorderSide(color: AppColors.contour),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: const BorderSide(color: AppColors.contour),
+        ),
       ),
     );
   }

@@ -17,8 +17,10 @@ class PartnerRepository {
       .collection('partners')
       .orderBy('nom')
       .snapshots(includeMetadataChanges: true)
-      .map((snap) => (
-            partenaires: [for (final doc in snap.docs) Partner.fromMap(doc.id, doc.data())],
-            horsLigne: snap.metadata.isFromCache,
-          ));
+      .map(
+        (snap) => (
+          partenaires: [for (final doc in snap.docs) Partner.fromMap(doc.id, doc.data())],
+          horsLigne: snap.metadata.isFromCache,
+        ),
+      );
 }

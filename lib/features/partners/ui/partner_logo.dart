@@ -34,11 +34,7 @@ class PartnerLogo extends StatelessWidget {
                 ? initiales
                 : ColoredBox(
                     color: scheme.surface,
-                    child: Image.network(
-                      partner.logoUrl,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => initiales,
-                    ),
+                    child: Image.network(partner.logoUrl, fit: BoxFit.contain, errorBuilder: (_, _, _) => initiales),
                   ),
           ),
         ),

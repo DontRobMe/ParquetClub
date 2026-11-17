@@ -21,11 +21,11 @@ class AnnuairePage extends StatelessWidget {
           PartnersLoading() => const _Squelette(),
           PartnersError(:final message) => _Erreur(message),
           PartnersEmpty(:final horsLigne, :final derniereSynchro) => Column(
-              children: [
-                if (horsLigne) BandeauHorsLigne(derniereSynchro: derniereSynchro),
-                const Expanded(child: Center(child: Text("Aucun partenaire dans l'annuaire pour le moment."))),
-              ],
-            ),
+            children: [
+              if (horsLigne) BandeauHorsLigne(derniereSynchro: derniereSynchro),
+              const Expanded(child: Center(child: Text("Aucun partenaire dans l'annuaire pour le moment."))),
+            ],
+          ),
           PartnersSuccess() => _Liste(state),
         },
       ),
@@ -129,9 +129,9 @@ class _Ligne extends StatelessWidget {
         title: Text(partner.nom, style: const TextStyle(fontWeight: FontWeight.w700)),
         subtitle: sousTitre.isEmpty ? null : Text(sousTitre),
         trailing: const Icon(Icons.arrow_forward),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => PartnerDetailPage(partnerId: partner.id)),
-        ),
+        onTap: () =>
+            Navigator.of(context)
+                .push(MaterialPageRoute<void>(builder: (_) => PartnerDetailPage(partnerId: partner.id))),
       ),
     );
   }
