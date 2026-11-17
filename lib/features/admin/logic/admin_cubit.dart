@@ -30,6 +30,9 @@ class AdminCubit extends Cubit<AdminState> {
     return null;
   }
 
+  /// F7. Vide si le partenaire n'en a pas donné ou si la lecture échoue.
+  Future<String> telephonePerso(String uid) => _repository.telephonePerso(uid).catchError((Object _) => '');
+
   /// Chaque action renvoie le message d'erreur à afficher, ou null si elle a réussi.
   Future<String?> inviter({required String nom, required String email}) {
     if (nom.trim().isEmpty || !email.contains('@')) {
