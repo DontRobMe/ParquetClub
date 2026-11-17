@@ -24,16 +24,13 @@ class PartnersCubit extends Cubit<PartnersState> {
   void charger() {
     emit(const PartnersLoading());
     _abonnement?.cancel();
-    _abonnement = _repository.ecouterPartenaires().listen(
-      (snap) {
-        _tous = snap.partenaires;
-        _horsLigne = snap.horsLigne;
-        if (!snap.horsLigne) _derniereSynchro = DateTime.now();
-        _recu = true;
-        _emettre();
-      },
-      onError: (Object _) => emit(const PartnersError("Impossible de charger l'annuaire.")),
-    );
+    _abonnement = _repository.ecouterPartenaires().listen((snap) {
+      _tous = snap.partenaires;
+      _horsLigne = snap.horsLigne;
+      if (!snap.horsLigne) _derniereSynchro = DateTime.now();
+      _recu = true;
+      _emettre();
+    }, onError: (Object _) => emit(const PartnersError("Impossible de charger l'annuaire.")));
   }
 
   void rechercher(String texte) {
@@ -66,13 +63,15 @@ class PartnersCubit extends Cubit<PartnersState> {
       final texte = _normaliser('${p.nom} ${p.metier} ${p.ville}');
       return mots.every(texte.contains);
     }).toList();
-    emit(PartnersSuccess(
-      partenaires: visibles,
-      recherche: _recherche,
-      secteur: _secteur,
-      horsLigne: _horsLigne,
-      derniereSynchro: _derniereSynchro,
-    ));
+    emit(
+      PartnersSuccess(
+        partenaires: visibles,
+        recherche: _recherche,
+        secteur: _secteur,
+        horsLigne: _horsLigne,
+        derniereSynchro: _derniereSynchro,
+      ),
+    );
   }
 
   @override

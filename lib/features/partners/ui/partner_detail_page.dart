@@ -78,10 +78,7 @@ class _Fiche extends StatelessWidget {
             ),
           ],
         ),
-        if (p.description.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          Text(p.description),
-        ],
+        if (p.description.isNotEmpty) ...[const SizedBox(height: 20), Text(p.description)],
         if (adresse.isNotEmpty) ...[
           const SizedBox(height: 16),
           Row(
@@ -96,11 +93,7 @@ class _Fiche extends StatelessWidget {
         for (final (icone, libelle, uri) in actions)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: OutlinedButton.icon(
-              icon: Icon(icone),
-              label: Text(libelle),
-              onPressed: () => _ouvrir(context, uri),
-            ),
+            child: OutlinedButton.icon(icon: Icon(icone), label: Text(libelle), onPressed: () => _ouvrir(context, uri)),
           ),
       ],
     );
@@ -111,8 +104,7 @@ class _Fiche extends StatelessWidget {
 Future<void> _ouvrir(BuildContext context, Uri uri) async {
   final ok = await launchUrl(uri, mode: LaunchMode.externalApplication).catchError((_) => false);
   if (!ok && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Aucune application ne peut ouvrir ce lien.')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Aucune application ne peut ouvrir ce lien.')));
   }
 }

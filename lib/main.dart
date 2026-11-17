@@ -2,34 +2,40 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'core/navigation/onglets_page.dart';
 import 'core/theme/app_theme.dart';
+import 'features/events/data/event_repository.dart';
+import 'features/events/logic/events_cubit.dart';
 import 'features/partners/data/partner_repository.dart';
 import 'features/partners/logic/partners_cubit.dart';
-import 'features/partners/ui/annuaire_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Après `flutterfire configure` : ajouter `options: DefaultFirebaseOptions.currentPlatform`.
   await Firebase.initializeApp();
-  runApp(ParquetApp(partnerRepository: PartnerRepository()));
+  runApp(ParquetApp(partnerRepository: PartnerRepository(), eventRepository: EventRepository()));
 }
 
 class ParquetApp extends StatelessWidget {
-  const ParquetApp({super.key, required this.partnerRepository});
+  const ParquetApp({super.key, required this.partnerRepository, required this.eventRepository});
 
-  /// Injecté pour que les tests passent un faux repository.
+  /// Injectés pour que les tests passent de faux repositories.
   final PartnerRepository partnerRepository;
+  final EventRepository eventRepository;
 
   @override
   Widget build(BuildContext context) {
-    // Le Cubit de l'annuaire est au-dessus du Navigator : la liste et la fiche détail partagent le même état.
-    return BlocProvider(
-      create: (_) => PartnersCubit(partnerRepository)..charger(),
+    // Les Cubits sont au-dessus du Navigator : liste et détail partagent le même état.
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => PartnersCubit(partnerRepository)..charger()),
+        BlocProvider(create: (_) => EventsCubit(eventRepository)..charger()),
+      ],
       child: MaterialApp(
         title: 'Parquet',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
-        home: const AnnuairePage(),
+        home: const OngletsPage(),
       ),
     );
   }

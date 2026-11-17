@@ -34,7 +34,15 @@ service cloud.firestore {
 
       match /responses/{uid} {
         allow read: if isOwner(uid) || isAdmin();
-        allow write: if isOwner(uid);
+        // OWASP M4 : forme de la réponse vérifiée par le serveur ; pas de réponse à un événement annulé.
+        // Pas de delete : les réponses sont effacées par les Cloud Functions.
+        allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['vient', 'nbPersonnes', 'updatedAt'])
+          && request.resource.data.vient is bool
+          && request.resource.data.nbPersonnes is int
+          && request.resource.data.nbPersonnes >= 0
+          && request.resource.data.nbPersonnes <= 10
+          && get(/databases/$(database)/documents/events/$(eventId)).data.statut != 'annule';
       }
     }
   }
