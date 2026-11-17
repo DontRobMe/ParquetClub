@@ -1,8 +1,17 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// Clé de signature de publication : jamais dans Git (cours 6, *.jks et key.properties dans .gitignore).
+// En local, android/key.properties ; en CI, recréé à partir des secrets GitHub.
+val proprietesCle = Properties()
+val fichierCle = rootProject.file("key.properties")
+if (fichierCle.exists()) proprietesCle.load(FileInputStream(fichierCle))
 
 android {
     namespace = "fr.parquetclub.parquet"
@@ -16,7 +25,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "fr.parquetclub.parquet"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -32,11 +40,20 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = proprietesCle["keyAlias"] as String?
+            keyPassword = proprietesCle["keyPassword"] as String?
+            storeFile = (proprietesCle["storeFile"] as String?)?.let { file(it) }
+            storePassword = proprietesCle["storePassword"] as String?
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Sans key.properties (poste de dev, CI sans secrets) : clé de debug, pour que le build passe.
+            // Un tel binaire ne doit jamais être publié : le store le refuserait de toute façon.
+            signingConfig = signingConfigs.getByName(if (fichierCle.exists()) "release" else "debug")
         }
     }
 }

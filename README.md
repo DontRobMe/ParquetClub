@@ -34,3 +34,44 @@ firestore.rules, storage.rules    droits vérifiés côté serveur
 ```
 
 Polices : Barlow Condensed et DM Sans (licence OFL, `assets/fonts`).
+
+## Intégration continue
+
+`.github/workflows/ci.yml`, à chaque push sur `main` et à chaque pull request :
+
+1. **Analyse et tests** : format, `flutter analyze`, `flutter test`.
+2. **Cloud Functions** : le module se charge et exporte ses 5 fonctions.
+3. **Build Android** : `app-release.aab` obfusqué, numéro de build = numéro du run, téléchargeable dans l'onglet Actions (avec les symboles pour décoder les plantages).
+4. **Build iOS sans signature** (sur `main` seulement) : vérifie que l'app compile, faute de Mac dans l'équipe.
+
+## Publier
+
+### Clé de signature Android (une fois, à garder précieusement hors du dépôt)
+
+```bash
+keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+```
+
+- En local : copier le fichier dans `android/app/` et créer `android/key.properties` (ignorés par Git) :
+  ```
+  storeFile=upload-keystore.jks
+  storePassword=…
+  keyAlias=upload
+  keyPassword=…
+  ```
+- En CI : secrets GitHub `ANDROID_KEYSTORE_BASE64` (`base64 -w0 upload-keystore.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
+
+Sans clé, le build de publication est signé avec la clé de debug : il compile, mais ne doit jamais être envoyé sur un store.
+
+### Version
+
+`version: 1.0.0+1` dans `pubspec.yaml` : le nom (1.0.0) se change à la main à chaque version, le numéro de build est donné par la CI.
+
+### Distribuer avant de publier
+
+- Android : envoyer l'`.aab` de la CI en **test interne** sur la Play Console (Play App Signing activé).
+- iOS : depuis un Mac, `flutter build ipa`, puis **TestFlight**.
+
+### Fiches des stores
+
+Textes dans `Fiche_App_Store.pdf` et `Fiche_Google_Play.pdf` ; remplacer « [Nom du club] », ajouter l'icône, les captures et le lien vers la politique de confidentialité.
