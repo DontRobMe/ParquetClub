@@ -2,22 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parquet/main.dart';
 
+import 'fake_auth_repository.dart';
 import 'fake_event_repository.dart';
 import 'fake_partner_repository.dart';
 
 void main() {
+  late FakeAuthRepository auth;
   late FakePartnerRepository partners;
   late FakeEventRepository events;
 
-  Future<void> lancer(WidgetTester tester) async {
+  Future<void> lancer(WidgetTester tester, {bool connecte = false}) async {
+    auth = FakeAuthRepository(connecteAuDemarrage: connecte);
     partners = FakePartnerRepository();
     events = FakeEventRepository();
-    await tester.pumpWidget(ParquetApp(partnerRepository: partners, eventRepository: events));
+    await tester.pumpWidget(ParquetApp(authRepository: auth, partnerRepository: partners, eventRepository: events));
+    await tester.pump(); // lecture de la session
   }
 
-  testWidgets('chercher un expert-comptable et ouvrir sa fiche', (tester) async {
+  testWidgets('visiteur : accueil du club, annuaire et connexion, pas d\'événements', (tester) async {
+    await lancer(tester);
+    expect(find.text('Voir les partenaires'), findsOneWidget);
+    expect(find.text('Connexion'), findsOneWidget);
+    expect(find.text('Événements'), findsNothing);
+  });
+
+  testWidgets('chercher un expert-comptable et ouvrir sa fiche, sans compte', (tester) async {
     // Arrange
     await lancer(tester);
+    await tester.tap(find.text('Voir les partenaires'));
+    await tester.pump();
     partners.envoyer([atelier, cap, grain]);
     await tester.pump();
     expect(find.text('Atelier Martin'), findsOneWidget);
@@ -37,16 +50,38 @@ void main() {
 
   testWidgets('hors connexion, le bandeau remplace le chargement sans fin', (tester) async {
     await lancer(tester);
+    await tester.tap(find.text('Annuaire'));
+    await tester.pump();
     partners.envoyer([atelier], horsLigne: true);
     await tester.pump();
     expect(find.textContaining('Hors connexion'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
+  testWidgets('se connecter mène aux onglets du partenaire', (tester) async {
+    await lancer(tester);
+    await tester.tap(find.text('Se connecter'));
+    await tester.pump();
+
+    await tester.enterText(find.widgetWithText(TextField, 'E-mail'), 'contact@cap-conseil.example');
+    await tester.enterText(find.widgetWithText(TextField, 'Mot de passe'), 'faux');
+    await tester.tap(find.widgetWithText(FilledButton, 'Se connecter'));
+    await tester.pump();
+    expect(find.text('E-mail ou mot de passe incorrect.'), findsOneWidget);
+
+    await tester.enterText(find.widgetWithText(TextField, 'Mot de passe'), 'bon');
+    await tester.tap(find.widgetWithText(FilledButton, 'Se connecter'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Événements'), findsOneWidget);
+    expect(find.text('Mon profil'), findsOneWidget);
+    expect(find.text('Connexion'), findsNothing);
+  });
+
   // Parcours principal du cahier des charges (cours 6) : ouvrir un événement et répondre « Je viens ».
   testWidgets('ouvrir un événement et répondre Je viens à deux, hors connexion', (tester) async {
     // Arrange
-    await lancer(tester);
+    await lancer(tester, connecte: true);
     events.envoyer([soiree, afterwork, voeux]);
     await tester.tap(find.text('Événements'));
     await tester.pumpAndSettle();
@@ -73,5 +108,17 @@ void main() {
     await tester.pump();
     expect(find.text('Vous venez à 2'), findsOneWidget);
     expect(find.text('Réponse envoyée au club.'), findsOneWidget);
+  });
+
+  testWidgets('se déconnecter demande confirmation puis revient en visiteur', (tester) async {
+    await lancer(tester, connecte: true);
+    await tester.tap(find.text('Mon profil'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Se déconnecter'));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.widgetWithText(TextButton, 'Se déconnecter'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Voir les partenaires'), findsOneWidget);
   });
 }
