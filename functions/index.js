@@ -3,6 +3,7 @@
 const { setGlobalOptions } = require('firebase-functions/v2');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onDocumentWrittenWithAuthContext } = require('firebase-functions/v2/firestore');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
@@ -30,9 +31,10 @@ function texte(valeur, max, nom) {
   return valeur.trim();
 }
 
-/** Journal des actions du bureau (F18). */
-function journal(auteur, action, cible) {
-  return db.collection('adminLogs').add({ auteur, action, cible, date: FieldValue.serverTimestamp() });
+/** Journal des actions du bureau (F18) : qui a fait quoi, sur quoi, quand. */
+async function journal(auteur, action, cible) {
+  const email = (await getAuth().getUser(auteur).catch(() => null))?.email ?? auteur;
+  return db.collection('adminLogs').add({ auteur, auteurEmail: email, action, cible, date: FieldValue.serverTimestamp() });
 }
 
 async function nomDe(uid) {
@@ -148,4 +150,17 @@ exports.notifierEvenement = onDocumentWrittenWithAuthContext('events/{eventId}',
     data: { eventId: event.params.eventId }, // un appui ouvre le détail de l'événement
   });
   if (event.authType === 'app_user' && event.authId) await journal(event.authId, action, apres.titre);
+});
+
+/** RGPD : les réponses aux événements sont effacées 12 mois après l'événement (cahier des charges, partie 5). */
+exports.purgerReponses = onSchedule({ schedule: 'every day 03:00', timeZone: 'Europe/Paris' }, async () => {
+  const limite = new Date();
+  limite.setFullYear(limite.getFullYear() - 1);
+  // ponytail: relit chaque nuit tous les anciens événements ; marquer ceux déjà purgés si la liste grossit.
+  const anciens = await db.collection('events').where('date', '<', limite).get();
+  const writer = db.bulkWriter();
+  for (const event of anciens.docs) {
+    for (const reponse of await event.ref.collection('responses').listDocuments()) writer.delete(reponse);
+  }
+  await writer.close();
 });

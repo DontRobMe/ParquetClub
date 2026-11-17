@@ -8,6 +8,7 @@ import 'fake_auth_repository.dart';
 import 'fake_event_repository.dart';
 import 'fake_notification_repository.dart';
 import 'fake_partner_repository.dart';
+import 'fake_verrou_repository.dart';
 
 void main() {
   late FakeAuthRepository auth;
@@ -15,13 +16,17 @@ void main() {
   late FakeEventRepository events;
   late FakeAdminRepository admin;
   late FakeNotificationRepository notifications;
+  late FakeVerrouRepository verrou;
 
   Future<void> lancer(
     WidgetTester tester, {
     bool connecte = false,
     bool estBureau = false,
     bool notificationsADemander = false,
+    bool verrouActif = false,
+    bool verrouReussit = true,
   }) async {
+    verrou = FakeVerrouRepository(estActif: verrouActif, reussit: verrouReussit);
     notifications = FakeNotificationRepository(aDemander: notificationsADemander);
     auth = FakeAuthRepository(connecteAuDemarrage: connecte, compte: estBureau ? bureau : partenaire);
     partners = FakePartnerRepository();
@@ -34,6 +39,7 @@ void main() {
         eventRepository: events,
         adminRepository: admin,
         notificationRepository: notifications,
+        verrouRepository: verrou,
       ),
     );
     await tester.pump(); // lecture de la session
@@ -281,5 +287,39 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     expect(find.text('CONFIDENTIALITÉ'), findsOneWidget);
     expect(find.text('Vos droits'), findsOneWidget);
+  });
+
+  testWidgets("bureau : verrouillé à l'ouverture, déverrouillé par biométrie", (tester) async {
+    await lancer(tester, connecte: true, estBureau: true, verrouActif: true, verrouReussit: false);
+    await tester.pump();
+    expect(find.text('ESPACE BUREAU'), findsOneWidget);
+    expect(verrou.authentifications, 1); // la fenêtre du système s'ouvre d'elle-même
+
+    verrou.reussit = true;
+    await tester.tap(find.text('Déverrouiller'));
+    await tester.pump();
+    expect(find.text('ESPACE BUREAU'), findsNothing);
+    expect(find.text('Administration'), findsOneWidget);
+  });
+
+  testWidgets('partenaire : jamais de verrou biométrique', (tester) async {
+    await lancer(tester, connecte: true, verrouActif: true);
+    await tester.pump();
+    expect(find.text('ESPACE BUREAU'), findsNothing);
+  });
+
+  testWidgets('bureau : journal des actions', (tester) async {
+    await lancer(tester, connecte: true, estBureau: true);
+    admin.comptes.add(const []);
+    await tester.tap(find.text('Administration'));
+    await tester.pump();
+    await tester.tap(find.text('Journal des actions'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
+    admin.journal.add(const [
+      EntreeJournal(auteur: 'bureau@club.example', action: 'suppression du partenaire', cible: 'Studio Traverse'),
+    ]);
+    await tester.pump();
+    expect(find.text('suppression du partenaire : Studio Traverse'), findsOneWidget);
   });
 }

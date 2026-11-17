@@ -50,3 +50,26 @@ class ReponsesSuccess extends ReponsesState {
   /// Total des participants, pour le traiteur.
   int get total => reponses.where((r) => r.vient).fold(0, (somme, r) => somme + r.nbPersonnes);
 }
+
+/// Les 4 états du journal des actions (F18).
+sealed class JournalState {
+  const JournalState();
+}
+
+class JournalLoading extends JournalState {
+  const JournalLoading();
+}
+
+class JournalError extends JournalState {
+  const JournalError(this.message);
+  final String message;
+}
+
+class JournalEmpty extends JournalState {
+  const JournalEmpty();
+}
+
+class JournalSuccess extends JournalState {
+  const JournalSuccess(this.entrees);
+  final List<EntreeJournal> entrees;
+}

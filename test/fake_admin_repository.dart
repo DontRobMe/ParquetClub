@@ -6,6 +6,7 @@ import 'package:parquet/features/admin/data/admin_repository.dart';
 class FakeAdminRepository implements AdminRepository {
   final comptes = StreamController<List<Compte>>.broadcast();
   final reponses = StreamController<List<ReponseBureau>>.broadcast();
+  final journal = StreamController<List<EntreeJournal>>.broadcast();
   final appels = <String>[];
   String? refus; // message d'erreur renvoyé par la prochaine action
 
@@ -35,4 +36,7 @@ class FakeAdminRepository implements AdminRepository {
 
   @override
   Future<void> envoyerLienMotDePasse(String email) => _action('lien:$email');
+
+  @override
+  Stream<List<EntreeJournal>> ecouterJournal() => journal.stream;
 }

@@ -89,3 +89,26 @@ class ReponsesCubit extends Cubit<ReponsesState> {
     return super.close();
   }
 }
+
+/// Journal des actions du bureau (F18). Créé par l'écran du journal, fermé en le quittant.
+class JournalCubit extends Cubit<JournalState> {
+  JournalCubit(this._repository) : super(const JournalLoading());
+
+  final AdminRepository _repository;
+  StreamSubscription<List<EntreeJournal>>? _abonnement;
+
+  void charger() {
+    emit(const JournalLoading());
+    _abonnement?.cancel();
+    _abonnement = _repository.ecouterJournal().listen(
+      (entrees) => emit(entrees.isEmpty ? const JournalEmpty() : JournalSuccess(entrees)),
+      onError: (Object _) => emit(const JournalError('Impossible de charger le journal.')),
+    );
+  }
+
+  @override
+  Future<void> close() {
+    _abonnement?.cancel();
+    return super.close();
+  }
+}
