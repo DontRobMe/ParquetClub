@@ -31,5 +31,8 @@ class FakeAdminRepository implements AdminRepository {
   Future<void> supprimerPartenaire(String uid) => _action('supprimer:$uid');
 
   @override
+  Future<String> telephonePerso(String uid) async => '06 11 22 33 44';
+
+  @override
   Future<void> envoyerLienMotDePasse(String email) => _action('lien:$email');
 }

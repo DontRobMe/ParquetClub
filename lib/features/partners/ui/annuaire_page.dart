@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/confidentialite_page.dart';
 import '../../../core/widgets/bandeau_hors_ligne.dart';
 import '../data/partner.dart';
 import '../logic/partners_cubit.dart';
@@ -48,9 +49,11 @@ class _Liste extends StatelessWidget {
           // Liste paresseuse (cours 2 et 4) : seules les lignes visibles sont construites.
           child: ListView.builder(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-            itemCount: partenaires.isEmpty ? 2 : partenaires.length + 1,
+            // En-tête, lignes (ou « aucun résultat »), puis le lien Confidentialité pour les visiteurs.
+            itemCount: (partenaires.isEmpty ? 2 : partenaires.length + 1) + 1,
             itemBuilder: (context, i) {
               if (i == 0) return _EnTete(state);
+              if (i == (partenaires.isEmpty ? 2 : partenaires.length + 1)) return const _LienConfidentialite();
               if (partenaires.isEmpty) {
                 return const Padding(
                   padding: EdgeInsets.only(top: 24),
@@ -179,6 +182,23 @@ class _Erreur extends StatelessWidget {
             FilledButton(onPressed: context.read<PartnersCubit>().charger, child: const Text('Réessayer')),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _LienConfidentialite extends StatelessWidget {
+  const _LienConfidentialite();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton(
+        style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+        onPressed: () =>
+            Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ConfidentialitePage())),
+        child: const Text('Confidentialité'),
       ),
     );
   }

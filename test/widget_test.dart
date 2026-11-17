@@ -37,6 +37,17 @@ void main() {
       ),
     );
     await tester.pump(); // lecture de la session
+    if (connecte && !estBureau) {
+      partners.fiche.add(maFiche); // sinon le chargement de « Mon profil » tourne sans fin
+      await tester.pump();
+    }
+  }
+
+  /// Écran haut : tout le formulaire est construit, sans défilement.
+  void ecranHaut(WidgetTester tester) {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
   }
 
   testWidgets('visiteur : accueil du club, annuaire et connexion, pas d\'événements', (tester) async {
@@ -228,5 +239,47 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
     expect(find.text('Je viens'), findsOneWidget);
+  });
+
+  testWidgets('partenaire : modifier sa fiche, téléphone personnel réservé au bureau', (tester) async {
+    // Arrange
+    ecranHaut(tester);
+    await lancer(tester, connecte: true);
+    await tester.tap(find.text('Mon profil'));
+    await tester.pump();
+    await tester.tap(find.text('Modifier ma fiche'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
+    expect(find.textContaining('Visible uniquement par le bureau'), findsOneWidget);
+    expect(find.textContaining('pas de photo de personne'), findsOneWidget);
+
+    // Act : site en http refusé, puis corrigé
+    await tester.enterText(find.widgetWithText(TextField, 'Site web'), 'http://cap.fr');
+    await tester.tap(find.text('Enregistrer'));
+    await tester.pump();
+    expect(partners.fichesEnregistrees, isEmpty);
+    await tester.enterText(find.widgetWithText(TextField, 'Site web'), 'https://cap.fr');
+    await tester.enterText(find.widgetWithText(TextField, 'Téléphone personnel (facultatif)'), '06 12 34 56 78');
+    await tester.tap(find.text('Enregistrer'));
+    await tester.pump();
+
+    // Assert
+    expect(partners.fichesEnregistrees.single.site, 'https://cap.fr');
+    expect(partners.telephonesEnregistres.single, '06 12 34 56 78');
+    expect(find.text('Fiche enregistrée.'), findsWidgets); // affiché aussi pendant le retour à l'écran précédent
+  });
+
+  testWidgets("visiteur : politique de confidentialité en bas de l'annuaire", (tester) async {
+    ecranHaut(tester);
+    await lancer(tester);
+    await tester.tap(find.text('Annuaire'));
+    await tester.pump();
+    partners.envoyer([atelier]);
+    await tester.pump();
+    await tester.tap(find.text('Confidentialité'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('CONFIDENTIALITÉ'), findsOneWidget);
+    expect(find.text('Vos droits'), findsOneWidget);
   });
 }

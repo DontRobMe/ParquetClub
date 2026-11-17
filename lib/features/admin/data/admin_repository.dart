@@ -72,6 +72,12 @@ class AdminRepository {
     }
   }
 
+  /// F7. Téléphone personnel d'un partenaire : lisible par lui et par le bureau seulement.
+  Future<String> telephonePerso(String uid) async {
+    final doc = await _firestore.collection('partners').doc(uid).collection('private').doc('contact').get();
+    return doc.data()?['telephonePerso'] as String? ?? '';
+  }
+
   /// F13. Réponses à un événement, en temps réel.
   Stream<List<ReponseBureau>> ecouterReponses(String eventId) => _firestore
       .collection('events')

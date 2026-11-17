@@ -16,6 +16,7 @@ import 'features/events/logic/events_cubit.dart';
 import 'features/notifications/data/notification_repository.dart';
 import 'features/partners/data/partner_repository.dart';
 import 'features/partners/logic/partners_cubit.dart';
+import 'features/partners/logic/profile_cubit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -88,6 +89,8 @@ class ParquetApp extends StatelessWidget {
                 providers: [
                   BlocProvider(create: (_) => EventsCubit(eventRepository, notificationRepository)..charger()),
                   if (session.estAdmin) BlocProvider(create: (_) => AdminCubit(adminRepository)..charger()),
+                  if (!session.estAdmin)
+                    BlocProvider(create: (_) => ProfileCubit(partnerRepository, session.uid)..charger()),
                 ],
                 child: app,
               ),

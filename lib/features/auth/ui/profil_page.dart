@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/confidentialite_page.dart';
+import '../../partners/logic/profile_cubit.dart';
+import '../../partners/ui/fiche_form_page.dart';
+import '../../partners/ui/partner_logo.dart';
 import '../data/auth_repository.dart';
 import '../logic/auth_cubit.dart';
 
-/// Onglet « Mon profil ». L'édition de la fiche (F6, F7) viendra s'ajouter ici.
+/// Onglet « Mon profil » : sa fiche (partenaire), la confidentialité et la déconnexion.
 class ProfilPage extends StatelessWidget {
   const ProfilPage({super.key, required this.session});
 
@@ -30,6 +34,7 @@ class ProfilPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    void ouvrir(Widget page) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
     return Scaffold(
       // Déconnexion en haut, loin du pouce.
       appBar: AppBar(
@@ -48,8 +53,57 @@ class ProfilPage extends StatelessWidget {
             session.estAdmin ? 'Compte du bureau' : 'Compte partenaire',
             style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
           ),
+          if (!session.estAdmin) ...[const SizedBox(height: 24), _MaFiche(ouvrir: ouvrir)],
+          const SizedBox(height: 24),
+          TextButton(
+            style: TextButton.styleFrom(alignment: Alignment.centerLeft, minimumSize: const Size.fromHeight(48)),
+            onPressed: () => ouvrir(const ConfidentialitePage()),
+            child: const Text('Confidentialité'),
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _MaFiche extends StatelessWidget {
+  const _MaFiche({required this.ouvrir});
+
+  final void Function(Widget) ouvrir;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<ProfileCubit, ProfileState>(
+      builder: (context, state) => switch (state) {
+        ProfileLoading() => const Center(child: CircularProgressIndicator(semanticsLabel: 'Chargement de votre fiche')),
+        ProfileError(:final message) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(message),
+            OutlinedButton(onPressed: context.read<ProfileCubit>().charger, child: const Text('Réessayer')),
+          ],
+        ),
+        ProfileSuccess(:final fiche, :final telephonePerso) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                contentPadding: const EdgeInsets.all(12),
+                leading: PartnerLogo(fiche),
+                title: Text(fiche.nom, style: const TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: Text(fiche.metier.isEmpty ? 'Fiche à compléter' : [fiche.metier, fiche.ville].join(' · ')),
+              ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              icon: const Icon(Icons.edit_outlined),
+              label: const Text('Modifier ma fiche'),
+              onPressed: () => ouvrir(FicheFormPage(fiche: fiche, telephonePerso: telephonePerso)),
+            ),
+          ],
+        ),
+      },
     );
   }
 }

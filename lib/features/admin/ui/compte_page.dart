@@ -53,6 +53,11 @@ class _ComptePageState extends State<ComptePage> {
                 compte.actif ? 'Accès actif' : 'Accès désactivé',
                 style: TextStyle(fontWeight: FontWeight.w700, color: theme.colorScheme.onSurfaceVariant),
               ),
+              FutureBuilder<String>(
+                future: cubit.telephonePerso(compte.uid),
+                builder: (context, tel) =>
+                    (tel.data ?? '').isEmpty ? const SizedBox.shrink() : Text('Téléphone personnel : ${tel.data}'),
+              ),
               const SizedBox(height: 24),
               // Actions sensibles en haut, loin du pouce, et toujours confirmées (cours 5).
               OutlinedButton.icon(
