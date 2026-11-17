@@ -4,6 +4,7 @@ import 'package:parquet/features/events/logic/events_cubit.dart';
 import 'package:parquet/features/events/logic/events_state.dart';
 
 import '../../fake_event_repository.dart';
+import '../../fake_notification_repository.dart';
 
 Future<void> laisserPasser() => Future<void>.delayed(Duration.zero);
 
@@ -92,5 +93,56 @@ void main() {
     );
     await cubit.enregistrer(nouveau, ancien: soiree);
     expect(repository.enregistres.single.statut, EventStatut.prevu);
+  });
+
+  group('rappel 2 jours avant (F16)', () {
+    late FakeNotificationRepository notifications;
+    late EventsCubit avecRappels;
+
+    setUp(() async {
+      notifications = FakeNotificationRepository();
+      avecRappels = EventsCubit(repository, notifications)..charger();
+      repository.envoyer([soiree, afterwork]);
+      await laisserPasser();
+    });
+
+    tearDown(() => avecRappels.close());
+
+    test('« Je viens » programme le rappel', () async {
+      avecRappels.repondre('loge', vient: true, nbPersonnes: 2);
+      await laisserPasser();
+      expect(notifications.rappels.keys, ['loge']);
+    });
+
+    test("changer d'avis retire le rappel", () async {
+      avecRappels.repondre('loge', vient: true, nbPersonnes: 2);
+      await laisserPasser();
+      avecRappels.repondre('loge', vient: false);
+      await laisserPasser();
+      expect(notifications.rappels, isEmpty);
+    });
+
+    test('un événement annulé perd son rappel', () async {
+      avecRappels.repondre('loge', vient: true, nbPersonnes: 1);
+      await laisserPasser();
+      repository.envoyer([
+        Event(id: soiree.id, titre: soiree.titre, date: soiree.date, statut: EventStatut.annule),
+        afterwork,
+      ]);
+      await laisserPasser();
+      expect(notifications.rappels, isEmpty);
+    });
+
+    test('une nouvelle date reprogramme le rappel', () async {
+      avecRappels.repondre('loge', vient: true, nbPersonnes: 1);
+      await laisserPasser();
+      final reportee = soiree.date.add(const Duration(days: 7));
+      repository.envoyer([
+        Event(id: soiree.id, titre: soiree.titre, date: reportee, statut: EventStatut.modifie),
+        afterwork,
+      ]);
+      await laisserPasser();
+      expect(notifications.rappels['loge']!.date, reportee);
+    });
   });
 }

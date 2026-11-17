@@ -13,6 +13,7 @@ import 'features/auth/logic/auth_state.dart';
 import 'features/auth/ui/lancement_page.dart';
 import 'features/events/data/event_repository.dart';
 import 'features/events/logic/events_cubit.dart';
+import 'features/notifications/data/notification_repository.dart';
 import 'features/partners/data/partner_repository.dart';
 import 'features/partners/logic/partners_cubit.dart';
 
@@ -26,6 +27,7 @@ Future<void> main() async {
       partnerRepository: PartnerRepository(),
       eventRepository: EventRepository(),
       adminRepository: AdminRepository(),
+      notificationRepository: NotificationRepository(),
     ),
   );
 }
@@ -37,6 +39,7 @@ class ParquetApp extends StatelessWidget {
     required this.partnerRepository,
     required this.eventRepository,
     required this.adminRepository,
+    required this.notificationRepository,
   });
 
   /// Injectés pour que les tests passent de faux repositories.
@@ -44,6 +47,7 @@ class ParquetApp extends StatelessWidget {
   final PartnerRepository partnerRepository;
   final EventRepository eventRepository;
   final AdminRepository adminRepository;
+  final NotificationRepository notificationRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +55,7 @@ class ParquetApp extends StatelessWidget {
       value: adminRepository, // lu par l'écran de suivi d'un événement (ReponsesCubit)
       child: MultiBlocProvider(
         providers: [
-          BlocProvider(create: (_) => AuthCubit(authRepository)..demarrer()),
+          BlocProvider(create: (_) => AuthCubit(authRepository, notificationRepository)..demarrer()),
           // Annuaire public : un seul Cubit pour toute la vie de l'app.
           BlocProvider(create: (_) => PartnersCubit(partnerRepository)..charger()),
         ],
@@ -82,7 +86,7 @@ class ParquetApp extends StatelessWidget {
               AuthConnecte(:final session) => MultiBlocProvider(
                 key: ValueKey(session.uid),
                 providers: [
-                  BlocProvider(create: (_) => EventsCubit(eventRepository)..charger()),
+                  BlocProvider(create: (_) => EventsCubit(eventRepository, notificationRepository)..charger()),
                   if (session.estAdmin) BlocProvider(create: (_) => AdminCubit(adminRepository)..charger()),
                 ],
                 child: app,

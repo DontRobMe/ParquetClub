@@ -15,7 +15,8 @@ flutter run
 2. `flutterfire configure`, puis ajouter `options: DefaultFirebaseOptions.currentPlatform` dans `lib/main.dart`.
 3. `cd functions && npm install`, puis `firebase deploy --only firestore:rules,storage,functions`.
 4. Créer chaque compte du bureau : `node functions/scripts/creer-admin.js prenom@club.fr` (voir l'en-tête du script). Le bénévole choisit son mot de passe avec « Mot de passe oublié ».
-5. Dans Authentication > Modèles, adapter l'e-mail de réinitialisation : c'est aussi l'e-mail d'invitation d'un nouveau partenaire.
+5. iOS (sur un Mac) : dans Xcode, ajouter les capacités *Push Notifications* et *Background Modes > Remote notifications*, puis déposer la clé APNs dans Firebase > Paramètres > Cloud Messaging.
+6. Dans Authentication > Modèles, adapter l'e-mail de réinitialisation : c'est aussi l'e-mail d'invitation d'un nouveau partenaire.
 
 ## Organisation (cahier des charges, partie 4)
 
