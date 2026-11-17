@@ -1,5 +1,6 @@
 package fr.parquetclub.parquet
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+// FlutterFragmentActivity : exigé par local_auth pour la fenêtre biométrique du système (F17).
+class MainActivity : FlutterFragmentActivity()

@@ -75,4 +75,24 @@ void main() {
       await cubit.close();
     });
   });
+
+  group('JournalCubit', () {
+    test('affiche les actions du bureau', () async {
+      final cubit = JournalCubit(repository)..charger();
+      repository.journal.add(const [
+        EntreeJournal(auteur: 'bureau@club.example', action: "désactivation de l'accès", cible: 'Cap Conseil'),
+      ]);
+      await laisserPasser();
+      expect((cubit.state as JournalSuccess).entrees.single.cible, 'Cap Conseil');
+      await cubit.close();
+    });
+
+    test('journal vide : état vide', () async {
+      final cubit = JournalCubit(repository)..charger();
+      repository.journal.add(const []);
+      await laisserPasser();
+      expect(cubit.state, isA<JournalEmpty>());
+      await cubit.close();
+    });
+  });
 }

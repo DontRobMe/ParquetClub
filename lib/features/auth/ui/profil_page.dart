@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/confidentialite_page.dart';
+import '../../admin/logic/verrou_cubit.dart';
 import '../../partners/logic/profile_cubit.dart';
 import '../../partners/ui/fiche_form_page.dart';
 import '../../partners/ui/partner_logo.dart';
@@ -54,6 +55,7 @@ class ProfilPage extends StatelessWidget {
             style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
           ),
           if (!session.estAdmin) ...[const SizedBox(height: 24), _MaFiche(ouvrir: ouvrir)],
+          if (session.estAdmin) ...[const SizedBox(height: 24), const _Verrouillage()],
           const SizedBox(height: 24),
           TextButton(
             style: TextButton.styleFrom(alignment: Alignment.centerLeft, minimumSize: const Size.fromHeight(48)),
@@ -104,6 +106,34 @@ class _MaFiche extends StatelessWidget {
           ],
         ),
       },
+    );
+  }
+}
+
+/// F17. Réglage du verrouillage biométrique, compte bureau seulement.
+class _Verrouillage extends StatelessWidget {
+  const _Verrouillage();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<VerrouCubit, VerrouState>(
+      builder: (context, state) => SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Verrouiller par empreinte ou visage'),
+        subtitle: Text(
+          state.disponible
+              ? "Demandé à l'ouverture de l'app et à chaque retour sur l'app."
+              : "Ce téléphone n'a ni empreinte, ni visage, ni code configuré.",
+        ),
+        value: state.actif,
+        onChanged: state.disponible
+            ? (actif) async {
+                final messager = ScaffoldMessenger.of(context);
+                final erreur = await context.read<VerrouCubit>().changerPreference(actif: actif);
+                if (erreur != null) messager.showSnackBar(SnackBar(content: Text(erreur)));
+              }
+            : null,
+      ),
     );
   }
 }

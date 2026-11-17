@@ -20,6 +20,16 @@ class ReponseBureau {
   final int nbPersonnes;
 }
 
+/// Ligne du journal des actions du bureau (F18), écrite par les Cloud Functions.
+class EntreeJournal {
+  const EntreeJournal({required this.auteur, required this.action, required this.cible, this.date});
+
+  final String auteur; // e-mail du bénévole
+  final String action;
+  final String cible;
+  final DateTime? date;
+}
+
 /// Erreur déjà traduite pour l'écran.
 class AdminErreur implements Exception {
   const AdminErreur(this.message);
@@ -77,6 +87,24 @@ class AdminRepository {
     final doc = await _firestore.collection('partners').doc(uid).collection('private').doc('contact').get();
     return doc.data()?['telephonePerso'] as String? ?? '';
   }
+
+  /// F18. Les 100 dernières actions du bureau, les plus récentes d'abord.
+  Stream<List<EntreeJournal>> ecouterJournal() => _firestore
+      .collection('adminLogs')
+      .orderBy('date', descending: true)
+      .limit(100)
+      .snapshots()
+      .map(
+        (snap) => [
+          for (final doc in snap.docs)
+            EntreeJournal(
+              auteur: doc.data()['auteurEmail'] as String? ?? '',
+              action: doc.data()['action'] as String? ?? '',
+              cible: doc.data()['cible'] as String? ?? '',
+              date: (doc.data()['date'] as Timestamp?)?.toDate(),
+            ),
+        ],
+      );
 
   /// F13. Réponses à un événement, en temps réel.
   Stream<List<ReponseBureau>> ecouterReponses(String eventId) => _firestore

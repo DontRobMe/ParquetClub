@@ -6,7 +6,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/navigation/onglets_page.dart';
 import 'core/theme/app_theme.dart';
 import 'features/admin/data/admin_repository.dart';
+import 'features/admin/data/verrou_repository.dart';
 import 'features/admin/logic/admin_cubit.dart';
+import 'features/admin/logic/verrou_cubit.dart';
+import 'features/admin/ui/ecran_verrou.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/logic/auth_cubit.dart';
 import 'features/auth/logic/auth_state.dart';
@@ -29,6 +32,7 @@ Future<void> main() async {
       eventRepository: EventRepository(),
       adminRepository: AdminRepository(),
       notificationRepository: NotificationRepository(),
+      verrouRepository: VerrouRepository(),
     ),
   );
 }
@@ -41,6 +45,7 @@ class ParquetApp extends StatelessWidget {
     required this.eventRepository,
     required this.adminRepository,
     required this.notificationRepository,
+    required this.verrouRepository,
   });
 
   /// Injectés pour que les tests passent de faux repositories.
@@ -49,6 +54,7 @@ class ParquetApp extends StatelessWidget {
   final EventRepository eventRepository;
   final AdminRepository adminRepository;
   final NotificationRepository notificationRepository;
+  final VerrouRepository verrouRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +81,11 @@ class ParquetApp extends StatelessWidget {
               locale: const Locale('fr'),
               supportedLocales: const [Locale('fr')],
               localizationsDelegates: GlobalMaterialLocalizations.delegates,
+              // Compte bureau : toute l'app (onglets et écrans ouverts) passe sous le verrou biométrique (F17).
+              builder: (context, child) => switch (auth) {
+                AuthConnecte(:final session) when session.estAdmin => EcranVerrou(child: child!),
+                _ => child!,
+              },
               home: switch (auth) {
                 AuthInconnu() => const LancementPage(),
                 AuthVisiteur() => const OngletsPage(),
@@ -88,7 +99,10 @@ class ParquetApp extends StatelessWidget {
                 key: ValueKey(session.uid),
                 providers: [
                   BlocProvider(create: (_) => EventsCubit(eventRepository, notificationRepository)..charger()),
-                  if (session.estAdmin) BlocProvider(create: (_) => AdminCubit(adminRepository)..charger()),
+                  if (session.estAdmin) ...[
+                    BlocProvider(create: (_) => AdminCubit(adminRepository)..charger()),
+                    BlocProvider(create: (_) => VerrouCubit(verrouRepository)..demarrer(), lazy: false),
+                  ],
                   if (!session.estAdmin)
                     BlocProvider(create: (_) => ProfileCubit(partnerRepository, session.uid)..charger()),
                 ],

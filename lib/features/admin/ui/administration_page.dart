@@ -8,6 +8,7 @@ import '../logic/admin_state.dart';
 import 'compte_page.dart';
 import 'gestion_evenements_page.dart';
 import 'inviter_page.dart';
+import 'journal_page.dart';
 
 /// Onglet Administration du bureau : partenaires actifs, invitations, comptes, événements.
 class AdministrationPage extends StatelessWidget {
@@ -37,6 +38,12 @@ class AdministrationPage extends StatelessWidget {
               icon: const Icon(Icons.event),
               label: const Text('Gérer les événements'),
               onPressed: () => ouvrir(const GestionEvenementsPage()),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.history),
+              label: const Text('Journal des actions'),
+              onPressed: () => ouvrir(const JournalPage()),
             ),
             const SizedBox(height: 24),
             Semantics(header: true, child: Text('Partenaires', style: theme.textTheme.headlineSmall)),
