@@ -82,6 +82,12 @@ jobs:
           keyAlias=$KEY_ALIAS
           keyPassword=$KEY_PASSWORD
           EOF
+      # android/gradle.properties demande 8 Go pour Gradle : trop pour le runner (7 Go), qui tue le build (code 143).
+      # ~/.gradle/gradle.properties est prioritaire sur celui du projet, les postes de dev ne changent pas.
+      - name: Mémoire Gradle adaptée au runner
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError" >> ~/.gradle/gradle.properties
       # Version : nom dans pubspec.yaml, numéro de build = numéro du run (toujours croissant, exigé par les stores).
       # Obfuscation + symboles à part : binaire plus dur à lire, traces de plantage toujours décodables.
       - run: >
