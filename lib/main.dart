@@ -1,44 +1,35 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'core/theme/app_theme.dart';
+import 'features/partners/data/partner_repository.dart';
+import 'features/partners/logic/partners_cubit.dart';
+import 'features/partners/ui/annuaire_page.dart';
 
-void main() {
-  runApp(const ParquetApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Après `flutterfire configure` : ajouter `options: DefaultFirebaseOptions.currentPlatform`.
+  await Firebase.initializeApp();
+  runApp(ParquetApp(partnerRepository: PartnerRepository()));
 }
 
 class ParquetApp extends StatelessWidget {
-  const ParquetApp({super.key});
+  const ParquetApp({super.key, required this.partnerRepository});
+
+  /// Injecté pour que les tests passent un faux repository.
+  final PartnerRepository partnerRepository;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Parquet',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      home: const LancementPage(),
-    );
-  }
-}
-
-/// Écran de lancement (maquette) : remplacé par la navigation par rôle une fois Firebase branché.
-class LancementPage extends StatelessWidget {
-  const LancementPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Scaffold(
-      backgroundColor: scheme.secondary,
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.sports_basketball, size: 72, color: scheme.primary, semanticLabel: 'Parquet'),
-            const SizedBox(height: 12),
-            Text('PARQUET.', style: Theme.of(context).textTheme.displaySmall?.copyWith(color: scheme.onSecondary)),
-            Text('Club partenaires', style: TextStyle(color: scheme.onSecondary)),
-          ],
-        ),
+    // Le Cubit de l'annuaire est au-dessus du Navigator : la liste et la fiche détail partagent le même état.
+    return BlocProvider(
+      create: (_) => PartnersCubit(partnerRepository)..charger(),
+      child: MaterialApp(
+        title: 'Parquet',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        home: const AnnuairePage(),
       ),
     );
   }
