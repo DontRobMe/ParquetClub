@@ -15,7 +15,7 @@ if (fichierCle.exists()) proprietesCle.load(FileInputStream(fichierCle))
 
 android {
     namespace = "fr.parquetclub.parquet"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37 // androidx.core 1.19 et flutter_local_notifications exigent 37 (Flutter fournit 36)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
