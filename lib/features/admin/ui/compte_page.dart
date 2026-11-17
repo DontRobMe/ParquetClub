@@ -78,7 +78,7 @@ class _ComptePageState extends State<ComptePage> {
                           return;
                         }
                         await _executer(
-                          () => cubit.changerAcces(compte.uid, actif: !compte.actif),
+                          () => cubit.changerAcces(compte.uid, actif: !compte.actif, nom: nom),
                           succes: compte.actif ? 'Accès désactivé.' : 'Accès réactivé.',
                         );
                       },
@@ -98,15 +98,18 @@ class _ComptePageState extends State<ComptePage> {
                           context,
                           titre: 'Supprimer $nom ?',
                           texte:
-                              'Le compte, la fiche, le logo, le numéro privé et les réponses aux événements '
-                              'seront effacés définitivement.',
+                              'La fiche, le logo, le numéro privé et les réponses aux événements seront effacés '
+                              'définitivement. Il restera à supprimer son compte de connexion dans la console Firebase.',
                           action: 'Supprimer',
                         )) {
                           return;
                         }
                         await _executer(
-                          () => cubit.supprimer(compte.uid),
-                          succes: 'Partenaire supprimé.',
+                          () => cubit.supprimer(compte.uid, nom: nom),
+                          // Forfait Spark : l'app ne peut pas supprimer le compte de connexion d'un autre.
+                          succes:
+                              'Partenaire supprimé. Supprimez aussi ${compte.email} dans la console '
+                              'Firebase (Authentication).',
                           fermer: true,
                         );
                       },

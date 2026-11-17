@@ -17,6 +17,10 @@ void main() {
     setUp(() => cubit = AdminCubit(repository)..charger()); // Arrange
     tearDown(() => cubit.close());
 
+    test("RGPD : la purge des vieilles réponses part à l'ouverture de l'espace bureau", () {
+      expect(repository.purges, 1);
+    });
+
     test('compte les partenaires actifs', () async {
       repository.comptes.add(const [
         Compte(uid: 'a', email: 'a@x.fr', actif: true),
@@ -50,7 +54,7 @@ void main() {
 
     test('un refus du serveur est renvoyé tel quel à l\'écran', () async {
       repository.refus = 'Un compte existe déjà avec cet e-mail.';
-      expect(await cubit.supprimer('a'), 'Un compte existe déjà avec cet e-mail.');
+      expect(await cubit.supprimer('a', nom: 'Atelier'), 'Un compte existe déjà avec cet e-mail.');
     });
   });
 

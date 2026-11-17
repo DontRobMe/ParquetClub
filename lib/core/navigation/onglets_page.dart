@@ -37,35 +37,11 @@ class _OngletsPageState extends State<OngletsPage> {
     super.initState();
     if (widget.session == null) return; // un visiteur ne voit aucune demande de permission
     final auth = context.read<AuthCubit>();
-    // Appui sur une notification : ouvrir le détail de l'événement.
+    // Appui sur un rappel : ouvrir le détail de l'événement.
     _ouvertures = auth.evenementsOuverts.listen((id) {
       if (!mounted) return;
       Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => EventDetailPage(eventId: id)));
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _notifications(auth));
-  }
-
-  /// Une phrase d'explication avant la fenêtre du système (cahier des charges, partie 5).
-  Future<void> _notifications(AuthCubit auth) async {
-    if (await auth.notificationsADemander()) {
-      if (!mounted) return;
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Être prévenu des événements'),
-          content: const Text(
-            'Parquet vous envoie une notification quand le club crée, modifie ou annule une invitation, '
-            'et un rappel 2 jours avant un événement auquel vous venez.',
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Plus tard')),
-            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Continuer')),
-          ],
-        ),
-      );
-      if (ok != true) return; // refus : l'app fonctionne, les événements restent dans l'onglet
-    }
-    await auth.activerNotifications();
   }
 
   @override

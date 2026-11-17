@@ -11,12 +11,21 @@ flutter run
 
 ## Mettre en place Firebase (une fois)
 
-1. Créer le projet Firebase (région `europe-west9`), activer Authentication (e-mail / mot de passe), Firestore, Storage, et passer au forfait Blaze (obligatoire pour Cloud Functions).
+Forfait **Spark** (gratuit, sans carte) : Authentication et Firestore seulement, région `europe-west9` (Paris).
+Pas de Cloud Functions ni de Storage : les actions du bureau se font depuis son téléphone, protégées par
+`firestore.rules`, et les logos sont rangés dans les fiches.
+
+1. Console Firebase : Authentication (e-mail / mot de passe, modèles d'e-mail en français) et Firestore (édition Standard, `(default)`, `europe-west9`, mode production).
 2. `flutterfire configure`, puis ajouter `options: DefaultFirebaseOptions.currentPlatform` dans `lib/main.dart`.
-3. `cd functions && npm install`, puis `firebase deploy --only firestore:rules,storage,functions`.
-4. Créer chaque compte du bureau : `node functions/scripts/creer-admin.js prenom@club.fr` (voir l'en-tête du script). Le bénévole choisit son mot de passe avec « Mot de passe oublié ».
-5. iOS (sur un Mac) : dans Xcode, ajouter les capacités *Push Notifications* et *Background Modes > Remote notifications*, puis déposer la clé APNs dans Firebase > Paramètres > Cloud Messaging.
-6. Dans Authentication > Modèles, adapter l'e-mail de réinitialisation : c'est aussi l'e-mail d'invitation d'un nouveau partenaire.
+3. `firebase deploy --only firestore:rules`.
+4. Premier compte du bureau, à la main dans la console :
+   - Authentication > Ajouter un utilisateur (e-mail + mot de passe provisoire), copier son UID ;
+   - Firestore > collection `users` > document dont l'ID est cet UID, champs `email` (string), `role` = `admin` (string), `disabled` = `false` (boolean) ;
+   - le bénévole choisit ensuite son mot de passe avec « Mot de passe oublié ».
+   Les comptes suivants (bureau et partenaires) se créent depuis l'app.
+5. Supprimer un partenaire depuis l'app efface ses données ; son compte de connexion se supprime ensuite à la main (Authentication).
+
+Limite du forfait Spark : pas de notification push envoyée par un serveur (F14). Le rappel 2 jours avant (F16) est une notification locale et fonctionne.
 
 ## Organisation (cahier des charges, partie 4)
 
@@ -29,8 +38,7 @@ lib/features/<auth|partners|events|admin>/
     logic/   Cubits et états (sealed class : chargement, erreur, vide, succès)
     ui/      écrans
 test/                             un test par Cubit + test widget « Je viens » (cours 6)
-functions/                        Cloud Functions : créer, désactiver, supprimer un compte, push
-firestore.rules, storage.rules    droits vérifiés côté serveur
+firestore.rules                   droits vérifiés côté serveur
 ```
 
 Polices : Barlow Condensed et DM Sans (licence OFL, `assets/fonts`).
@@ -40,9 +48,8 @@ Polices : Barlow Condensed et DM Sans (licence OFL, `assets/fonts`).
 `.github/workflows/ci.yml`, à chaque push sur `main` et à chaque pull request :
 
 1. **Analyse et tests** : format, `flutter analyze`, `flutter test`.
-2. **Cloud Functions** : le module se charge et exporte ses 5 fonctions.
-3. **Build Android** : `app-release.aab` obfusqué, numéro de build = numéro du run, téléchargeable dans l'onglet Actions (avec les symboles pour décoder les plantages).
-4. **Build iOS sans signature** (sur `main` seulement) : vérifie que l'app compile, faute de Mac dans l'équipe.
+2. **Build Android** : `app-release.aab` obfusqué, numéro de build = numéro du run, téléchargeable dans l'onglet Actions (avec les symboles pour décoder les plantages).
+3. **Build iOS sans signature** (sur `main` seulement) : vérifie que l'app compile, faute de Mac dans l'équipe.
 
 ## Publier
 

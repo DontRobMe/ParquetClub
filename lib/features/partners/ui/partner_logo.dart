@@ -28,14 +28,13 @@ class PartnerLogo extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           child: SizedBox.square(
             dimension: taille,
-            // ponytail: pas de cache disque des logos, hors ligne on retombe sur les initiales ;
-            // ajouter cached_network_image si le jury le demande.
-            child: partner.logoUrl.isEmpty
-                ? initiales
-                : ColoredBox(
-                    color: scheme.surface,
-                    child: Image.network(partner.logoUrl, fit: BoxFit.contain, errorBuilder: (_, _, _) => initiales),
-                  ),
+            child: switch (partner.logo) {
+              null => initiales,
+              final octets => ColoredBox(
+                color: scheme.surface,
+                child: Image.memory(octets, fit: BoxFit.contain, errorBuilder: (_, _, _) => initiales),
+              ),
+            },
           ),
         ),
       ),

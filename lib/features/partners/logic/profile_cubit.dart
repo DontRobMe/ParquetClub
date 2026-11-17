@@ -73,7 +73,7 @@ class ProfileCubit extends Cubit<ProfileState> {
       telephone: fiche.telephone.trim(),
       email: fiche.email.trim(),
       site: fiche.site.trim(),
-      logoUrl: fiche.logoUrl,
+      logo: fiche.logo,
     );
     _repository.mettreAJourFiche(propre).catchError((Object _) => surRefus?.call());
     _repository.enregistrerTelephonePerso(uid, telephonePerso.trim()).catchError((Object _) => surRefus?.call());

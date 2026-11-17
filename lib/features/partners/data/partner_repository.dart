@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'partner.dart';
@@ -15,14 +14,11 @@ class PartnerErreur implements Exception {
 /// Seule classe de la fonctionnalité qui connaît Firebase.
 /// Pas d'interface séparée (cours 2) : en Dart, le faux repository des tests fait `implements PartnerRepository`.
 class PartnerRepository {
-  PartnerRepository([FirebaseFirestore? firestore, FirebaseStorage? storage])
-    : _firestore = firestore ?? FirebaseFirestore.instance,
-      _storage = storage ?? FirebaseStorage.instance;
+  PartnerRepository([FirebaseFirestore? firestore]) : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _firestore;
-  final FirebaseStorage _storage;
 
-  static const tailleMaxLogo = 1024 * 1024; // même limite que storage.rules
+  static const tailleMaxLogo = 150 * 1000; // même limite que les règles Firestore
 
   /// Écoute l'annuaire en temps réel. Sans réseau, Firestore répond depuis son cache local :
   /// `horsLigne` vaut alors true (bandeau « Hors connexion »).
@@ -65,32 +61,25 @@ class PartnerRepository {
   Future<void> enregistrerTelephonePerso(String uid, String telephone) =>
       _contact(uid).set({'telephonePerso': telephone});
 
-  /// Logo : sélecteur photo du système (aucune permission), redimensionné à 512 px avant l'envoi.
-  /// Renvoie false si l'utilisateur annule.
+  /// Logo : sélecteur photo du système (aucune permission), réduit à 256 px avant l'envoi.
+  /// Renvoie false si l'utilisateur annule. Hors ligne, il part au retour du réseau.
   Future<bool> choisirEtEnvoyerLogo(String uid) async {
     final image = await ImagePicker().pickImage(
       source: ImageSource.gallery,
-      maxWidth: 512,
-      maxHeight: 512,
-      imageQuality: 85,
+      maxWidth: 256,
+      maxHeight: 256,
+      imageQuality: 80,
       requestFullMetadata: false, // pas de position GPS ni de métadonnées de la photo
     );
     if (image == null) return false;
     final octets = await image.readAsBytes();
-    if (octets.length >= tailleMaxLogo) throw const PartnerErreur('Image trop lourde (1 Mo maximum).');
-    try {
-      final ref = _storage.ref('logos/$uid.jpg');
-      await ref.putData(octets, SettableMetadata(contentType: 'image/jpeg'));
-      // Paramètre de version : le nouveau logo remplace l'ancien dans le cache des téléphones.
-      final url = '${await ref.getDownloadURL()}&v=${DateTime.now().millisecondsSinceEpoch}';
-      await _firestore.collection('partners').doc(uid).update({
-        'logoUrl': url,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      return true;
-    } on FirebaseException {
-      throw const PartnerErreur("Le logo n'a pas pu être envoyé. Vérifiez la connexion et réessayez.");
-    }
+    if (octets.length >= tailleMaxLogo) throw const PartnerErreur('Image trop lourde (150 Ko maximum).');
+    // Pas d'attente du serveur : comme une réponse « Je viens », l'écriture est mise en file hors ligne.
+    _firestore.collection('partners').doc(uid).update({
+      'logo': Blob(octets),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }).ignore();
+    return true;
   }
 
   DocumentReference<Map<String, dynamic>> _contact(String uid) =>

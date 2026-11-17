@@ -1,3 +1,7 @@
+import 'dart:typed_data';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 /// Secteurs proposés par les filtres de l'annuaire (maquette et fiches store).
 const secteurs = ['Artisanat', 'Services', 'Restauration', 'Autre'];
 
@@ -15,7 +19,7 @@ class Partner {
     this.telephone = '',
     this.email = '',
     this.site = '',
-    this.logoUrl = '',
+    this.logo,
   });
 
   final String id; // = uid du compte du partenaire
@@ -28,7 +32,10 @@ class Partner {
   final String telephone;
   final String email;
   final String site;
-  final String logoUrl;
+
+  /// Logo de l'entreprise (JPEG de 256 px au plus), rangé dans la fiche elle-même :
+  /// forfait Spark, donc pas de Storage. Bonus : il s'affiche aussi hors ligne.
+  final Uint8List? logo;
 
   factory Partner.fromMap(String id, Map<String, dynamic> data) {
     String texte(String cle) => data[cle] is String ? data[cle] as String : '';
@@ -43,7 +50,7 @@ class Partner {
       telephone: texte('telephone'),
       email: texte('email'),
       site: texte('site'),
-      logoUrl: texte('logoUrl'),
+      logo: data['logo'] is Blob ? (data['logo'] as Blob).bytes : null,
     );
   }
 }

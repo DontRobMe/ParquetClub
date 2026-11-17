@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
@@ -9,31 +7,22 @@ import 'package:timezone/timezone.dart' as tz;
 import '../../../core/format_date.dart';
 import '../../events/data/event.dart';
 
-/// Notifications (cahier des charges, partie 4) :
-/// - push : envoyée par la Cloud Function via FCM sur le topic `partenaires`, arrive même app fermée ;
-/// - locale : rappel 2 jours avant, programmé par l'app elle-même, part même sans réseau (F16).
-/// Seule classe qui connaît FCM et le plugin de notifications locales.
+/// Notifications locales : rappel 2 jours avant un événement (F16), programmé par l'app elle-même.
+/// Il part même sans réseau et sans serveur.
+/// Forfait Spark : sans Cloud Functions, pas de push envoyé par un serveur (F14 reportée, voir le cahier des charges).
+/// Seule classe qui connaît le plugin de notifications.
 class NotificationRepository {
-  NotificationRepository([
-    FirebaseMessaging? messaging,
-    FirebaseFirestore? firestore,
-    FlutterLocalNotificationsPlugin? local,
-  ]) : _messaging = messaging ?? FirebaseMessaging.instance,
-       _firestore = firestore ?? FirebaseFirestore.instance,
-       _local = local ?? FlutterLocalNotificationsPlugin();
+  NotificationRepository([FlutterLocalNotificationsPlugin? local])
+    : _local = local ?? FlutterLocalNotificationsPlugin();
 
-  static const topic = 'partenaires';
   static const _canalRappels = AndroidNotificationDetails(
     'rappels',
     'Rappels',
     channelDescription: 'Rappel 2 jours avant un événement auquel vous venez',
   );
 
-  final FirebaseMessaging _messaging;
-  final FirebaseFirestore _firestore;
   final FlutterLocalNotificationsPlugin _local;
   final _ouvertures = StreamController<String>.broadcast();
-  StreamSubscription<String>? _rafraichissement;
   bool _lancementLu = false;
 
   /// Initialisé une seule fois, au premier besoin ; tous les appels attendent la même initialisation.
@@ -42,14 +31,10 @@ class NotificationRepository {
 
   Future<void> _initialiserUneFois() async {
     tz_data.initializeTimeZones();
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      final id = message.data['eventId'];
-      if (id is String) _ouvertures.add(id);
-    });
     await _local.initialize(
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-        // La permission est demandée une seule fois, par FCM, au bon moment.
+        // La permission est demandée au moment où elle sert, après une explication (cours 3, OWASP M6).
         iOS: DarwinInitializationSettings(
           requestAlertPermission: false,
           requestBadgePermission: false,
@@ -63,47 +48,31 @@ class NotificationRepository {
     );
   }
 
-  /// Vrai si le système n'a encore jamais posé la question : l'app explique d'abord pourquoi.
-  Future<bool> permissionADemander() async =>
-      (await _messaging.getNotificationSettings()).authorizationStatus == AuthorizationStatus.notDetermined;
-
-  /// À la connexion d'un partenaire : autorisation, token enregistré dans `users/{uid}`, abonnement au topic.
-  /// En cas de refus, l'app fonctionne : les événements restent visibles dans l'onglet.
-  Future<void> activer(String uid) async {
+  /// Vrai si les notifications ne sont pas encore autorisées : l'app explique d'abord pourquoi.
+  Future<bool> permissionADemander() async {
     await _initialiser();
-    final reglages = await _messaging.requestPermission();
-    if (reglages.authorizationStatus == AuthorizationStatus.denied) return;
-
-    Future<void> enregistrer(String token) => _firestore.collection('users').doc(uid).update({'fcmToken': token});
-
-    // getToken / onTokenRefresh / deleteToken sont marqués obsolètes au profit de register() (identifiant
-    // d'installation), mais les topics et le SDK Admin des Cloud Functions travaillent encore avec ce token.
-    // ignore: deprecated_member_use
-    final token = await _messaging.getToken();
-    if (token != null) await enregistrer(token);
-    await _rafraichissement?.cancel();
-    // ignore: deprecated_member_use
-    _rafraichissement = _messaging.onTokenRefresh.listen(enregistrer);
-    await _messaging.subscribeToTopic(topic);
+    final android = _local.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) return !(await android.areNotificationsEnabled() ?? true);
+    final ios = _local.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+    if (ios != null) return !((await ios.checkPermissions())?.isEnabled ?? true);
+    return false;
   }
 
-  /// À la déconnexion : plus de push ni de rappel sur ce téléphone, même pour le compte suivant.
-  Future<void> desactiver() async {
-    await _rafraichissement?.cancel();
-    _rafraichissement = null;
-    await _messaging.unsubscribeFromTopic(topic);
-    // ignore: deprecated_member_use
-    await _messaging.deleteToken(); // l'ancien token ne vaut plus rien, même s'il reste en base
+  /// Fenêtre du système. En cas de refus, l'app fonctionne : seul le rappel manque.
+  Future<void> demanderPermission() async {
     await _initialiser();
-    await _local.cancelAll();
+    await _local
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
+    await _local.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()?.requestPermissions(
+      alert: true,
+      sound: true,
+    );
   }
 
-  /// Identifiants d'événements à ouvrir : appui sur un push (app fermée ou en arrière-plan) ou sur un rappel.
+  /// Identifiants d'événements à ouvrir après un appui sur un rappel (app ouverte ou lancée par le rappel).
   Stream<String> evenementsOuverts() async* {
     await _initialiser();
-    final depart = await _messaging.getInitialMessage();
-    final id = depart?.data['eventId'];
-    if (id is String) yield id;
     if (!_lancementLu) {
       _lancementLu = true; // le plugin renvoie toujours le même lancement : on ne le lit qu'une fois
       final lancement = await _local.getNotificationAppLaunchDetails();
@@ -135,6 +104,7 @@ class NotificationRepository {
     await _local.cancel(id: idRappel(eventId));
   }
 
+  /// Aussi à la déconnexion : aucun rappel d'un compte ne survit pour le suivant sur ce téléphone.
   Future<void> annulerTousLesRappels() async {
     await _initialiser();
     await _local.cancelAll();

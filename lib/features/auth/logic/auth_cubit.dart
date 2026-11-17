@@ -6,7 +6,7 @@ import '../../notifications/data/notification_repository.dart';
 import '../data/auth_repository.dart';
 import 'auth_state.dart';
 
-/// Session et ce qui en dépend : rôle, notifications du compte.
+/// Session et ce qui en dépend : rôle, rappels du compte.
 class AuthCubit extends Cubit<AuthState> {
   AuthCubit(this._repository, this._notifications) : super(const AuthInconnu());
 
@@ -46,42 +46,12 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  /// Les notifications ne concernent que les partenaires (topic `partenaires`).
-  bool get _partenaire => switch (state) {
-    AuthConnecte(:final session) => !session.estAdmin,
-    _ => false,
-  };
-
-  /// Vrai si l'écran doit d'abord expliquer pourquoi l'app demande les notifications (OWASP M6, cours 3).
-  Future<bool> notificationsADemander() async {
-    if (!_partenaire) return false;
-    try {
-      return await _notifications.permissionADemander();
-    } catch (_) {
-      return false;
-    }
-  }
-
-  /// À chaque ouverture d'un compte partenaire : token à jour et abonnement aux invitations.
-  Future<void> activerNotifications() async {
-    final s = state;
-    if (s is! AuthConnecte || !_partenaire) return;
-    try {
-      await _notifications.activer(s.session.uid);
-    } catch (_) {
-      // Sans réseau ou sans autorisation, l'app reste utilisable ; nouvel essai à la prochaine ouverture.
-    }
-  }
-
-  /// Événements à ouvrir après un appui sur une notification.
+  /// Événements à ouvrir après un appui sur un rappel.
   Stream<String> get evenementsOuverts => _notifications.evenementsOuverts();
 
   Future<void> deconnecter() async {
-    try {
-      await _notifications.desactiver();
-    } catch (_) {
-      // Hors ligne : l'abonnement reste côté serveur jusqu'au prochain token ; la session est quand même fermée.
-    }
+    // Aucun rappel de ce compte ne doit sonner pour le suivant sur ce téléphone.
+    await _notifications.annulerTousLesRappels().catchError((Object _) {});
     await _repository.deconnecter();
   }
 

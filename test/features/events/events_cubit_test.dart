@@ -145,4 +145,13 @@ void main() {
       expect(notifications.rappels['loge']!.date, reportee);
     });
   });
+
+  test('rappel : autorisation demandée seulement si elle manque', () async {
+    final notifications = FakeNotificationRepository(aDemander: true);
+    final avecRappels = EventsCubit(repository, notifications);
+    expect(await avecRappels.rappelsADemander(), isTrue);
+    await avecRappels.autoriserRappels();
+    expect(notifications.demandes, 1);
+    await avecRappels.close();
+  });
 }

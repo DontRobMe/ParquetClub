@@ -3,6 +3,7 @@ import 'package:parquet/features/auth/logic/auth_cubit.dart';
 import 'package:parquet/features/auth/logic/auth_state.dart';
 
 import '../../fake_auth_repository.dart';
+import '../../fake_event_repository.dart';
 import '../../fake_notification_repository.dart';
 
 Future<void> laisserPasser() => Future<void>.delayed(Duration.zero);
@@ -59,37 +60,12 @@ void main() {
     expect(cubit.state, isA<AuthVisiteur>());
   });
 
-  test('partenaire connecté : notifications activées avec son uid', () async {
+  test('déconnexion : rappels de ce compte retirés du téléphone', () async {
     await laisserPasser();
     await cubit.connecter('contact@cap-conseil.example', 'bon');
     await laisserPasser();
-    expect(await cubit.notificationsADemander(), isTrue);
-    await cubit.activerNotifications();
-    expect(notifications.activations, ['p1']);
-  });
-
-  test('visiteur : jamais de demande de notifications', () async {
-    await laisserPasser();
-    expect(await cubit.notificationsADemander(), isFalse);
-    await cubit.activerNotifications();
-    expect(notifications.activations, isEmpty);
-  });
-
-  test('bureau : pas abonné aux invitations des partenaires', () async {
-    final bureauCubit = AuthCubit(FakeAuthRepository(compte: bureau, connecteAuDemarrage: true), notifications)
-      ..demarrer();
-    await laisserPasser();
-    expect(await bureauCubit.notificationsADemander(), isFalse);
-    await bureauCubit.activerNotifications();
-    expect(notifications.activations, isEmpty);
-    await bureauCubit.close();
-  });
-
-  test('déconnexion : notifications et rappels coupés sur ce téléphone', () async {
-    await laisserPasser();
-    await cubit.connecter('contact@cap-conseil.example', 'bon');
-    await laisserPasser();
+    notifications.rappels['loge'] = soiree;
     await cubit.deconnecter();
-    expect(notifications.desactivations, 1);
+    expect(notifications.rappels, isEmpty);
   });
 }

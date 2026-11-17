@@ -13,6 +13,8 @@ class AdminCubit extends Cubit<AdminState> {
   StreamSubscription<List<Compte>>? _abonnement;
 
   void charger() {
+    // RGPD : réponses effacées 12 mois après l'événement. Sans serveur, le bureau s'en charge à l'ouverture.
+    _repository.purgerReponsesAnciennes().catchError((Object _) {});
     emit(const AdminLoading());
     _abonnement?.cancel();
     _abonnement = _repository.ecouterComptes().listen(
@@ -41,10 +43,11 @@ class AdminCubit extends Cubit<AdminState> {
     return _essayer(() => _repository.creerPartenaire(nom: nom.trim(), email: email.trim()));
   }
 
-  Future<String?> changerAcces(String uid, {required bool actif}) =>
-      _essayer(() => _repository.changerAcces(uid, actif: actif));
+  Future<String?> changerAcces(String uid, {required bool actif, required String nom}) =>
+      _essayer(() => _repository.changerAcces(uid, actif: actif, nom: nom));
 
-  Future<String?> supprimer(String uid) => _essayer(() => _repository.supprimerPartenaire(uid));
+  Future<String?> supprimer(String uid, {required String nom}) =>
+      _essayer(() => _repository.supprimerPartenaire(uid, nom: nom));
 
   Future<String?> envoyerLien(String email) => _essayer(() => _repository.envoyerLienMotDePasse(email));
 
