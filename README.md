@@ -9,7 +9,13 @@ flutter pub get
 flutter run
 ```
 
-Firebase n'est pas encore branché : `flutterfire configure` génère `lib/firebase_options.dart`.
+## Mettre en place Firebase (une fois)
+
+1. Créer le projet Firebase (région `europe-west9`), activer Authentication (e-mail / mot de passe), Firestore, Storage, et passer au forfait Blaze (obligatoire pour Cloud Functions).
+2. `flutterfire configure`, puis ajouter `options: DefaultFirebaseOptions.currentPlatform` dans `lib/main.dart`.
+3. `cd functions && npm install`, puis `firebase deploy --only firestore:rules,storage,functions`.
+4. Créer chaque compte du bureau : `node functions/scripts/creer-admin.js prenom@club.fr` (voir l'en-tête du script). Le bénévole choisit son mot de passe avec « Mot de passe oublié ».
+5. Dans Authentication > Modèles, adapter l'e-mail de réinitialisation : c'est aussi l'e-mail d'invitation d'un nouveau partenaire.
 
 ## Organisation (cahier des charges, partie 4)
 
@@ -22,6 +28,7 @@ lib/features/<auth|partners|events|admin>/
     logic/   Cubits et états (sealed class : chargement, erreur, vide, succès)
     ui/      écrans
 test/                             un test par Cubit + test widget « Je viens » (cours 6)
+functions/                        Cloud Functions : créer, désactiver, supprimer un compte, push
 firestore.rules, storage.rules    droits vérifiés côté serveur
 ```
 

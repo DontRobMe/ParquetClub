@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../features/admin/ui/administration_page.dart';
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/ui/accueil_page.dart';
 import '../../features/auth/ui/connexion_page.dart';
@@ -8,8 +9,8 @@ import '../../features/events/ui/evenements_page.dart';
 import '../../features/partners/ui/annuaire_page.dart';
 
 /// Onglets en bas, dans la zone du pouce (cours 5), calculés à partir de la session.
-/// Visiteur : Club, Annuaire, Connexion. Partenaire et bureau : Annuaire, Événements, Mon profil.
-// ponytail: l'onglet Administration du bureau arrive avec ses écrans (F3 à F5, F10, F13).
+/// Visiteur : Club, Annuaire, Connexion. Partenaire : Annuaire, Événements, Mon profil.
+/// Bureau : les mêmes et Administration. Masquer l'onglet ne protège rien : le serveur revérifie le rôle.
 class OngletsPage extends StatefulWidget {
   const OngletsPage({super.key, this.session});
 
@@ -44,6 +45,11 @@ class _OngletsPageState extends State<OngletsPage> {
               ProfilPage(session: session),
               const NavigationDestination(icon: Icon(Icons.person_outline), label: 'Mon profil'),
             ),
+            if (session.estAdmin)
+              (
+                const AdministrationPage(),
+                const NavigationDestination(icon: Icon(Icons.admin_panel_settings_outlined), label: 'Administration'),
+              ),
           ];
 
     return Scaffold(

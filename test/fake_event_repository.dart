@@ -25,6 +25,15 @@ class FakeEventRepository implements EventRepository {
     return _serveur.future;
   }
 
+  final enregistres = <Event>[];
+  final annules = <String>[];
+
+  @override
+  Future<void> enregistrer(Event event) async => enregistres.add(event);
+
+  @override
+  Future<void> annuler(String eventId) async => annules.add(eventId);
+
   void envoyer(List<Event> liste, {bool horsLigne = false}) =>
       evenements.add((evenements: liste, horsLigne: horsLigne));
 

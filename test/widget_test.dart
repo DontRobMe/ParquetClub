@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parquet/features/admin/data/admin_repository.dart';
 import 'package:parquet/main.dart';
 
+import 'fake_admin_repository.dart';
 import 'fake_auth_repository.dart';
 import 'fake_event_repository.dart';
 import 'fake_partner_repository.dart';
@@ -10,12 +12,16 @@ void main() {
   late FakeAuthRepository auth;
   late FakePartnerRepository partners;
   late FakeEventRepository events;
+  late FakeAdminRepository admin;
 
-  Future<void> lancer(WidgetTester tester, {bool connecte = false}) async {
-    auth = FakeAuthRepository(connecteAuDemarrage: connecte);
+  Future<void> lancer(WidgetTester tester, {bool connecte = false, bool estBureau = false}) async {
+    auth = FakeAuthRepository(connecteAuDemarrage: connecte, compte: estBureau ? bureau : partenaire);
     partners = FakePartnerRepository();
     events = FakeEventRepository();
-    await tester.pumpWidget(ParquetApp(authRepository: auth, partnerRepository: partners, eventRepository: events));
+    admin = FakeAdminRepository();
+    await tester.pumpWidget(
+      ParquetApp(authRepository: auth, partnerRepository: partners, eventRepository: events, adminRepository: admin),
+    );
     await tester.pump(); // lecture de la session
   }
 
@@ -115,10 +121,69 @@ void main() {
     await tester.tap(find.text('Mon profil'));
     await tester.pump();
     await tester.tap(find.byTooltip('Se déconnecter'));
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
     await tester.tap(find.widgetWithText(TextButton, 'Se déconnecter'));
     await tester.pump();
     await tester.pump();
     expect(find.text('Voir les partenaires'), findsOneWidget);
+  });
+
+  testWidgets("partenaire : pas d'onglet Administration", (tester) async {
+    await lancer(tester, connecte: true);
+    expect(find.text('Administration'), findsNothing);
+  });
+
+  testWidgets("bureau : suivi d'un événement avec le total pour le traiteur", (tester) async {
+    // Arrange
+    await lancer(tester, connecte: true, estBureau: true);
+    partners.envoyer([cap, grain]);
+    events.envoyer([soiree]);
+    admin.comptes.add(const []);
+    await tester.tap(find.text('Administration'));
+    await tester.pump();
+
+    // Act
+    await tester.tap(find.text('Gérer les événements'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
+    await tester.tap(find.text('Soirée en loge'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
+    admin.reponses.add(const [
+      ReponseBureau(uid: 'c', vient: true, nbPersonnes: 3),
+      ReponseBureau(uid: 'g', vient: false, nbPersonnes: 0),
+    ]);
+    await tester.pump();
+
+    // Assert
+    expect(find.text('3'), findsOneWidget);
+    expect(find.text('participants confirmés'), findsOneWidget);
+    expect(find.textContaining('Cap Conseil'), findsOneWidget);
+    expect(find.textContaining('Absent'), findsOneWidget);
+  });
+
+  testWidgets('bureau : annuler un événement demande confirmation', (tester) async {
+    await lancer(tester, connecte: true, estBureau: true);
+    events.envoyer([soiree]);
+    admin.comptes.add(const []);
+    await tester.tap(find.text('Administration'));
+    await tester.pump();
+    await tester.tap(find.text('Gérer les événements'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
+    await tester.tap(find.text('Soirée en loge'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
+
+    await tester.scrollUntilVisible(find.widgetWithText(TextButton, "Annuler l'événement"), 200);
+    await tester.tap(find.widgetWithText(TextButton, "Annuler l'événement"));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
+    expect(events.annules, isEmpty); // rien tant que ce n'est pas confirmé
+    await tester.tap(find.widgetWithText(TextButton, "Annuler l'événement").last);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
+    expect(events.annules, ['loge']);
   });
 }

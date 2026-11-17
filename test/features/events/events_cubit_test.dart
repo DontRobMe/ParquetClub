@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parquet/features/events/data/event.dart';
 import 'package:parquet/features/events/logic/events_cubit.dart';
 import 'package:parquet/features/events/logic/events_state.dart';
 
@@ -73,5 +74,23 @@ void main() {
     await laisserPasser();
     expect((cubit.state as EventsSuccess).reponses, isEmpty);
     expect(cubit.evenement('loge'), isNull);
+  });
+
+  test("bureau : changer la date passe l'événement à « modifié »", () async {
+    final nouveau = Event(id: soiree.id, titre: soiree.titre, date: soiree.date.add(const Duration(days: 1)));
+    await cubit.enregistrer(nouveau, ancien: soiree);
+    expect(repository.enregistres.single.statut, EventStatut.modifie);
+  });
+
+  test('bureau : changer la description seule garde le statut', () async {
+    final nouveau = Event(
+      id: soiree.id,
+      titre: soiree.titre,
+      date: soiree.date,
+      lieu: soiree.lieu,
+      description: 'Tenue correcte',
+    );
+    await cubit.enregistrer(nouveau, ancien: soiree);
+    expect(repository.enregistres.single.statut, EventStatut.prevu);
   });
 }
