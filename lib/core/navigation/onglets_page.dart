@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../features/admin/ui/administration_page.dart';
 import '../../features/auth/data/auth_repository.dart';
+import '../../features/auth/logic/auth_cubit.dart';
+import '../../features/events/ui/event_detail_page.dart';
 import '../../features/auth/ui/accueil_page.dart';
 import '../../features/auth/ui/connexion_page.dart';
 import '../../features/auth/ui/profil_page.dart';
@@ -23,8 +28,51 @@ class OngletsPage extends StatefulWidget {
 
 class _OngletsPageState extends State<OngletsPage> {
   int _index = 0;
+  StreamSubscription<String>? _ouvertures;
 
   void _aller(int i) => setState(() => _index = i);
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.session == null) return; // un visiteur ne voit aucune demande de permission
+    final auth = context.read<AuthCubit>();
+    // Appui sur une notification : ouvrir le détail de l'événement.
+    _ouvertures = auth.evenementsOuverts.listen((id) {
+      if (!mounted) return;
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => EventDetailPage(eventId: id)));
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _notifications(auth));
+  }
+
+  /// Une phrase d'explication avant la fenêtre du système (cahier des charges, partie 5).
+  Future<void> _notifications(AuthCubit auth) async {
+    if (await auth.notificationsADemander()) {
+      if (!mounted) return;
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Être prévenu des événements'),
+          content: const Text(
+            'Parquet vous envoie une notification quand le club crée, modifie ou annule une invitation, '
+            'et un rappel 2 jours avant un événement auquel vous venez.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Plus tard')),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Continuer')),
+          ],
+        ),
+      );
+      if (ok != true) return; // refus : l'app fonctionne, les événements restent dans l'onglet
+    }
+    await auth.activerNotifications();
+  }
+
+  @override
+  void dispose() {
+    _ouvertures?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

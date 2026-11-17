@@ -3,16 +3,19 @@ import 'package:parquet/features/auth/logic/auth_cubit.dart';
 import 'package:parquet/features/auth/logic/auth_state.dart';
 
 import '../../fake_auth_repository.dart';
+import '../../fake_notification_repository.dart';
 
 Future<void> laisserPasser() => Future<void>.delayed(Duration.zero);
 
 void main() {
   late FakeAuthRepository repository;
+  late FakeNotificationRepository notifications;
   late AuthCubit cubit;
 
   setUp(() {
     repository = FakeAuthRepository();
-    cubit = AuthCubit(repository)..demarrer(); // Arrange
+    notifications = FakeNotificationRepository(aDemander: true);
+    cubit = AuthCubit(repository, notifications)..demarrer(); // Arrange
   });
 
   tearDown(() => cubit.close());
@@ -54,5 +57,39 @@ void main() {
     await cubit.deconnecter();
     await laisserPasser();
     expect(cubit.state, isA<AuthVisiteur>());
+  });
+
+  test('partenaire connecté : notifications activées avec son uid', () async {
+    await laisserPasser();
+    await cubit.connecter('contact@cap-conseil.example', 'bon');
+    await laisserPasser();
+    expect(await cubit.notificationsADemander(), isTrue);
+    await cubit.activerNotifications();
+    expect(notifications.activations, ['p1']);
+  });
+
+  test('visiteur : jamais de demande de notifications', () async {
+    await laisserPasser();
+    expect(await cubit.notificationsADemander(), isFalse);
+    await cubit.activerNotifications();
+    expect(notifications.activations, isEmpty);
+  });
+
+  test('bureau : pas abonné aux invitations des partenaires', () async {
+    final bureauCubit = AuthCubit(FakeAuthRepository(compte: bureau, connecteAuDemarrage: true), notifications)
+      ..demarrer();
+    await laisserPasser();
+    expect(await bureauCubit.notificationsADemander(), isFalse);
+    await bureauCubit.activerNotifications();
+    expect(notifications.activations, isEmpty);
+    await bureauCubit.close();
+  });
+
+  test('déconnexion : notifications et rappels coupés sur ce téléphone', () async {
+    await laisserPasser();
+    await cubit.connecter('contact@cap-conseil.example', 'bon');
+    await laisserPasser();
+    await cubit.deconnecter();
+    expect(notifications.desactivations, 1);
   });
 }

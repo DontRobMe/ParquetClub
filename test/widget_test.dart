@@ -6,6 +6,7 @@ import 'package:parquet/main.dart';
 import 'fake_admin_repository.dart';
 import 'fake_auth_repository.dart';
 import 'fake_event_repository.dart';
+import 'fake_notification_repository.dart';
 import 'fake_partner_repository.dart';
 
 void main() {
@@ -13,14 +14,27 @@ void main() {
   late FakePartnerRepository partners;
   late FakeEventRepository events;
   late FakeAdminRepository admin;
+  late FakeNotificationRepository notifications;
 
-  Future<void> lancer(WidgetTester tester, {bool connecte = false, bool estBureau = false}) async {
+  Future<void> lancer(
+    WidgetTester tester, {
+    bool connecte = false,
+    bool estBureau = false,
+    bool notificationsADemander = false,
+  }) async {
+    notifications = FakeNotificationRepository(aDemander: notificationsADemander);
     auth = FakeAuthRepository(connecteAuDemarrage: connecte, compte: estBureau ? bureau : partenaire);
     partners = FakePartnerRepository();
     events = FakeEventRepository();
     admin = FakeAdminRepository();
     await tester.pumpWidget(
-      ParquetApp(authRepository: auth, partnerRepository: partners, eventRepository: events, adminRepository: admin),
+      ParquetApp(
+        authRepository: auth,
+        partnerRepository: partners,
+        eventRepository: events,
+        adminRepository: admin,
+        notificationRepository: notifications,
+      ),
     );
     await tester.pump(); // lecture de la session
   }
@@ -185,5 +199,34 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
     expect(events.annules, ['loge']);
+  });
+
+  testWidgets('notifications : explication avant la fenêtre du système, puis activation', (tester) async {
+    await lancer(tester, connecte: true, notificationsADemander: true);
+    await tester.pump();
+    expect(find.text('Être prévenu des événements'), findsOneWidget);
+    expect(notifications.activations, isEmpty); // rien avant l'accord
+
+    await tester.tap(find.text('Continuer'));
+    await tester.pump();
+    expect(notifications.activations, ['p1']);
+  });
+
+  testWidgets('notifications : « Plus tard » ne demande rien au système', (tester) async {
+    await lancer(tester, connecte: true, notificationsADemander: true);
+    await tester.pump();
+    await tester.tap(find.text('Plus tard'));
+    await tester.pump();
+    expect(notifications.activations, isEmpty);
+  });
+
+  testWidgets("appui sur une notification : ouvre le détail de l'événement", (tester) async {
+    await lancer(tester, connecte: true);
+    events.envoyer([soiree]);
+    await tester.pump();
+    notifications.ouvertures.add('loge');
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
+    expect(find.text('Je viens'), findsOneWidget);
   });
 }

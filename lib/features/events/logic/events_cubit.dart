@@ -2,15 +2,21 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../notifications/data/notification_repository.dart';
 import '../data/event.dart';
 import '../data/event_repository.dart';
 import 'events_state.dart';
 
 /// ViewModel des événements : partagé par la liste et le détail (état partagé, cours 4).
 class EventsCubit extends Cubit<EventsState> {
-  EventsCubit(this._repository) : super(const EventsLoading());
+  EventsCubit(this._repository, [this._notifications]) : super(const EventsLoading());
 
   final EventRepository _repository;
+  final NotificationRepository? _notifications;
+
+  /// Rappels déjà programmés : identifiant de l'événement → ce qui a servi à les écrire.
+  final _rappels = <String, String>{};
+  bool _rappelsRemisAZero = false;
   StreamSubscription<EvenementsSnapshot>? _abonnement;
   // ponytail: une écoute par événement à venir ; un club en a une poignée. Requête collectionGroup si ça grossit.
   final _abonnementsReponses = <String, StreamSubscription<EventResponse?>>{};
@@ -90,8 +96,39 @@ class EventsCubit extends Cubit<EventsState> {
     }
   }
 
+  /// F16. Recalculé à chaque changement : « Je viens » programme le rappel, « Je ne viens pas »,
+  /// une annulation ou un événement passé le retirent ; un changement de date le reprogramme.
+  // ponytail: un événement annulé pendant que l'app est fermée garde son rappel jusqu'à la prochaine ouverture.
+  void _mettreAJourRappels() {
+    final notifications = _notifications;
+    if (notifications == null) return;
+    if (!_rappelsRemisAZero) {
+      // Au démarrage, on repart de zéro : rien d'un ancien état ou d'un autre compte ne survit.
+      _rappelsRemisAZero = true;
+      notifications.annulerTousLesRappels().ignore();
+    }
+    final voulus = {
+      for (final e in _evenements)
+        if (!e.annule && (_reponses[e.id]?.vient ?? false)) e.id: e,
+    };
+    for (final id in _rappels.keys.toList()) {
+      if (!voulus.containsKey(id)) {
+        _rappels.remove(id);
+        notifications.annulerRappel(id).ignore();
+      }
+    }
+    for (final e in voulus.values) {
+      final signature = '${e.date}|${e.titre}|${e.lieu}';
+      if (_rappels[e.id] != signature) {
+        _rappels[e.id] = signature;
+        notifications.programmerRappel(e).ignore();
+      }
+    }
+  }
+
   void _emettre() {
     if (!_recu) return;
+    _mettreAJourRappels();
     if (_evenements.isEmpty) {
       emit(EventsEmpty(horsLigne: _horsLigne, derniereSynchro: _derniereSynchro));
       return;
