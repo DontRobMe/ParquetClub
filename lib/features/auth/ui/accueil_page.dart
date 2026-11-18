@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:parquet/core/widgets/titre_parquet.dart';
 
 /// Accueil du club pour un visiteur : courte présentation, puis l'annuaire ou la connexion.
 class AccueilPage extends StatelessWidget {
@@ -40,6 +41,8 @@ class AccueilPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Spacer(),
+                  const Align(alignment: Alignment.centerLeft, child: LogoParquet(taille: 72)),
+                  const SizedBox(height: 12),
                   Semantics(
                     header: true,
                     child: Text(

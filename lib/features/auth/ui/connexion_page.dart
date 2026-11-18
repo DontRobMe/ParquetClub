@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../logic/auth_cubit.dart';
 
@@ -50,7 +51,7 @@ class _ConnexionPageState extends State<ConnexionPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('PARQUET.')),
+      appBar: AppBar(title: const TitreParquet()),
       body: AutofillGroup(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),

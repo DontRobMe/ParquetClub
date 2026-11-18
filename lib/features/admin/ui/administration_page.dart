@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../../partners/logic/partners_cubit.dart';
 import '../data/admin_repository.dart';
@@ -20,7 +21,7 @@ class AdministrationPage extends StatelessWidget {
     void ouvrir(Widget page) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('PARQUET.')),
+      appBar: AppBar(title: const TitreParquet()),
       body: BlocBuilder<AdminCubit, AdminState>(
         builder: (context, state) {
           final entete = <Widget>[

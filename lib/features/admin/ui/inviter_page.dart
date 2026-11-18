@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../logic/admin_cubit.dart';
 import 'confirmer.dart';
@@ -44,7 +45,7 @@ class _InviterPageState extends State<InviterPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('PARQUET.')),
+      appBar: AppBar(title: const TitreParquet()),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
         children: [

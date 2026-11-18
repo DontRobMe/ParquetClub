@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../../partners/logic/partners_cubit.dart';
 import '../logic/admin_cubit.dart';
@@ -37,13 +38,13 @@ class _ComptePageState extends State<ComptePage> {
         final compte = cubit.compte(widget.uid);
         if (compte == null) {
           return Scaffold(
-            appBar: AppBar(title: const Text('PARQUET.')),
+            appBar: AppBar(title: const TitreParquet()),
             body: const Center(child: Text("Ce compte n'existe plus.")),
           );
         }
         final nom = context.read<PartnersCubit>().partenaire(compte.uid)?.nom ?? compte.email;
         return Scaffold(
-          appBar: AppBar(title: const Text('PARQUET.')),
+          appBar: AppBar(title: const TitreParquet()),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
             children: [

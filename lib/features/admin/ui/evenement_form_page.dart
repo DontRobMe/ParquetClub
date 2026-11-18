@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../../../core/format_date.dart';
 import '../../events/data/event.dart';
@@ -82,7 +83,7 @@ class _EvenementFormPageState extends State<EvenementFormPage> {
     final date = _date;
     final creation = widget.existant == null;
     return Scaffold(
-      appBar: AppBar(title: const Text('PARQUET.')),
+      appBar: AppBar(title: const TitreParquet()),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
         children: [

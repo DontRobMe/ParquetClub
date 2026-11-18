@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../../../core/confidentialite_page.dart';
 import '../../admin/logic/verrou_cubit.dart';
@@ -39,7 +40,7 @@ class ProfilPage extends StatelessWidget {
     return Scaffold(
       // Déconnexion en haut, loin du pouce.
       appBar: AppBar(
-        title: const Text('PARQUET.'),
+        title: const TitreParquet(),
         actions: [
           IconButton(tooltip: 'Se déconnecter', icon: const Icon(Icons.logout), onPressed: () => _deconnecter(context)),
         ],

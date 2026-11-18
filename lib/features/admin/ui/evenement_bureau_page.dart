@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../../../core/format_date.dart';
 import '../../events/logic/events_cubit.dart';
@@ -28,12 +29,12 @@ class EvenementBureauPage extends StatelessWidget {
           final theme = Theme.of(context);
           if (event == null) {
             return Scaffold(
-              appBar: AppBar(title: const Text('PARQUET.')),
+              appBar: AppBar(title: const TitreParquet()),
               body: const Center(child: Text("Cet événement n'est plus à venir.")),
             );
           }
           return Scaffold(
-            appBar: AppBar(title: const Text('PARQUET.')),
+            appBar: AppBar(title: const TitreParquet()),
             body: ListView(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
               children: [

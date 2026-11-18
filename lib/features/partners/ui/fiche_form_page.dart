@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../data/partner.dart';
 import '../logic/profile_cubit.dart';
@@ -105,7 +106,7 @@ class _FicheFormPageState extends State<FicheFormPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('PARQUET.')),
+      appBar: AppBar(title: const TitreParquet()),
       body: BlocBuilder<ProfileCubit, ProfileState>(
         builder: (context, state) {
           // Le logo vient du Cubit : il change dès que l'envoi est terminé.
