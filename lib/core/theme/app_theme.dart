@@ -80,6 +80,8 @@ abstract final class AppTheme {
           shape: RoundedRectangleBorder(borderRadius: radius),
         ),
       ),
+      // Filtres de l'annuaire en pilules, comme sur la maquette.
+      chipTheme: const ChipThemeData(shape: StadiumBorder()),
       cardTheme: CardThemeData(
         color: AppColors.blanc,
         elevation: 0,

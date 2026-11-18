@@ -199,7 +199,10 @@ class _LienConfidentialite extends StatelessWidget {
         style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
         onPressed: () =>
             Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ConfidentialitePage())),
-        child: const Text('Confidentialité'),
+        child: Text(
+          'Confidentialité',
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w700),
+        ),
       ),
     );
   }

@@ -61,7 +61,10 @@ class ProfilPage extends StatelessWidget {
           TextButton(
             style: TextButton.styleFrom(alignment: Alignment.centerLeft, minimumSize: const Size.fromHeight(48)),
             onPressed: () => ouvrir(const ConfidentialitePage()),
-            child: const Text('Confidentialité'),
+            child: Text(
+              'Confidentialité',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),

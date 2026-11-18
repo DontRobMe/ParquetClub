@@ -10,6 +10,7 @@ import '../data/admin_repository.dart';
 import '../logic/admin_cubit.dart';
 import '../logic/admin_state.dart';
 import 'confirmer.dart';
+import '../../events/ui/etiquette_type.dart';
 import 'evenement_form_page.dart';
 
 /// Suivi d'un événement par le bureau (maquette « Suivi par le bureau ») : total et réponses (F13),
@@ -38,8 +39,7 @@ class EvenementBureauPage extends StatelessWidget {
             body: ListView(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
               children: [
-                if (event.type.isNotEmpty)
-                  Text(event.type, style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary)),
+                if (event.type.isNotEmpty) ...[EtiquetteType(event.type), const SizedBox(height: 6)],
                 Semantics(header: true, child: Text(event.titre.toUpperCase(), style: theme.textTheme.headlineLarge)),
                 Text(
                   [dateLongue(event.date), heure(event.date), if (event.lieu.isNotEmpty) event.lieu].join(' · '),
@@ -62,10 +62,10 @@ class EvenementBureauPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   // Action destructrice : hors de la zone d'action principale, en rouge, confirmée.
-                  TextButton(
-                    style: TextButton.styleFrom(
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
                       foregroundColor: theme.colorScheme.error,
-                      minimumSize: const Size.fromHeight(48),
+                      side: BorderSide(color: theme.colorScheme.error),
                     ),
                     onPressed: () async {
                       final cubit = context.read<EventsCubit>();
@@ -73,7 +73,7 @@ class EvenementBureauPage extends StatelessWidget {
                       if (!await confirmer(
                         context,
                         titre: "Annuler l'événement ?",
-                        texte: 'Tous les partenaires recevront une notification d\'annulation.',
+                        texte: "Les partenaires verront l'événement annulé dans l'app, et leur rappel sera retiré.",
                         action: "Annuler l'événement",
                       )) {
                         return;

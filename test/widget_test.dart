@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parquet/features/admin/data/admin_repository.dart';
+import 'package:parquet/features/partners/data/partner.dart';
+import 'package:parquet/features/partners/ui/partner_logo.dart';
 import 'package:parquet/main.dart';
 
 import 'fake_admin_repository.dart';
@@ -207,8 +209,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
 
-    await tester.scrollUntilVisible(find.widgetWithText(TextButton, "Annuler l'événement"), 200);
-    await tester.tap(find.widgetWithText(TextButton, "Annuler l'événement"));
+    await tester.scrollUntilVisible(find.widgetWithText(OutlinedButton, "Annuler l'événement"), 200);
+    await tester.tap(find.widgetWithText(OutlinedButton, "Annuler l'événement"));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
     expect(events.annules, isEmpty); // rien tant que ce n'est pas confirmé
@@ -333,6 +335,33 @@ void main() {
       EntreeJournal(auteur: 'bureau@club.example', action: 'suppression du partenaire', cible: 'Studio Traverse'),
     ]);
     await tester.pump();
-    expect(find.text('suppression du partenaire : Studio Traverse'), findsOneWidget);
+    expect(find.text('Suppression du partenaire : Studio Traverse'), findsOneWidget);
+  });
+
+  testWidgets('bureau : pas de « Je viens », un accès aux réponses', (tester) async {
+    await lancer(tester, connecte: true, estBureau: true);
+    admin.comptes.add(const []);
+    events.envoyer([soiree]);
+    await tester.pump();
+    notifications.ouvertures.add('loge');
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
+    expect(find.text('Je viens'), findsNothing);
+    expect(find.text('Voir les réponses'), findsOneWidget);
+  });
+
+  testWidgets("logo de remplacement : deux lettres, même pour un nom d'un seul mot", (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Column(
+          children: [
+            PartnerLogo(Partner(id: 'y', nom: 'Ynov2')),
+            PartnerLogo(Partner(id: 'a', nom: 'Atelier Martin')),
+          ],
+        ),
+      ),
+    );
+    expect(find.text('YN'), findsOneWidget);
+    expect(find.text('AM'), findsOneWidget);
   });
 }

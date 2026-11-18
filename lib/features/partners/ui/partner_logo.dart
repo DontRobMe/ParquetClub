@@ -43,6 +43,9 @@ class PartnerLogo extends StatelessWidget {
 }
 
 String _initiales(String nom) {
-  final mots = nom.trim().split(RegExp(r'\s+')).where((m) => m.isNotEmpty).take(2);
-  return mots.map((m) => m[0].toUpperCase()).join();
+  final mots = nom.trim().split(RegExp(r'\s+')).where((m) => m.isNotEmpty).toList();
+  if (mots.isEmpty) return '';
+  // Un seul mot (« Ynov2 ») : ses deux premières lettres, comme « AM » ou « CC » sur la maquette.
+  if (mots.length == 1) return mots.first.characters.take(2).toUpperCase().toString();
+  return mots.take(2).map((m) => m.characters.first.toUpperCase()).join();
 }
