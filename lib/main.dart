@@ -20,11 +20,12 @@ import 'features/notifications/data/notification_repository.dart';
 import 'features/partners/data/partner_repository.dart';
 import 'features/partners/logic/partners_cubit.dart';
 import 'features/partners/logic/profile_cubit.dart';
+import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Après `flutterfire configure` : ajouter `options: DefaultFirebaseOptions.currentPlatform`.
-  await Firebase.initializeApp();
+  // Projet Firebase « parquetclub » (forfait Spark), fichier généré par `flutterfire configure`.
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(
     ParquetApp(
       authRepository: AuthRepository(),
