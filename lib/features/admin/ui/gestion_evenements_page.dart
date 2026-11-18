@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../../../core/format_date.dart';
 import '../../events/logic/events_cubit.dart';
@@ -17,7 +18,7 @@ class GestionEvenementsPage extends StatelessWidget {
     void ouvrir(Widget page) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('PARQUET.')),
+      appBar: AppBar(title: const TitreParquet()),
       body: BlocBuilder<EventsCubit, EventsState>(
         builder: (context, state) {
           final List<Widget> contenu = switch (state) {

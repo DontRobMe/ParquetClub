@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../data/partner.dart';
 import '../logic/partners_cubit.dart';
@@ -17,7 +18,7 @@ class PartnerDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('PARQUET.')),
+      appBar: AppBar(title: const TitreParquet()),
       body: BlocBuilder<PartnersCubit, PartnersState>(
         builder: (context, _) {
           final p = context.read<PartnersCubit>().partenaire(partnerId);

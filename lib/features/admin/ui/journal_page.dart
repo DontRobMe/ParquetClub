@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../../../core/format_date.dart';
 import '../data/admin_repository.dart';
@@ -16,7 +17,7 @@ class JournalPage extends StatelessWidget {
     return BlocProvider(
       create: (context) => JournalCubit(context.read<AdminRepository>())..charger(),
       child: Scaffold(
-        appBar: AppBar(title: const Text('PARQUET.')),
+        appBar: AppBar(title: const TitreParquet()),
         body: BlocBuilder<JournalCubit, JournalState>(
           builder: (context, state) {
             final List<Widget> contenu = switch (state) {

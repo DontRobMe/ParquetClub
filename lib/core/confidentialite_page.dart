@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:parquet/core/widgets/titre_parquet.dart';
 
 /// Politique de confidentialité (cahier des charges, partie 5 « RGPD ; cours 6).
 /// Accessible depuis Mon profil et en bas de l'annuaire, pour les visiteurs. Lisible hors ligne.
@@ -46,7 +47,7 @@ class ConfidentialitePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('PARQUET.')),
+      appBar: AppBar(title: const TitreParquet()),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
         children: [

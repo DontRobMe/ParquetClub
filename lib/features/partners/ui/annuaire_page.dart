@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../../../core/confidentialite_page.dart';
 import '../../../core/widgets/bandeau_hors_ligne.dart';
@@ -16,7 +17,7 @@ class AnnuairePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('PARQUET.')),
+      appBar: AppBar(title: const TitreParquet()),
       body: BlocBuilder<PartnersCubit, PartnersState>(
         builder: (context, state) => switch (state) {
           PartnersLoading() => const _Squelette(),

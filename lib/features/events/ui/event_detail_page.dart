@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../../../core/format_date.dart';
 import '../data/event.dart';
@@ -64,14 +65,14 @@ class _EventDetailPageState extends State<EventDetailPage> {
           final event = context.read<EventsCubit>().evenement(widget.eventId);
           if (event == null) {
             return Scaffold(
-              appBar: AppBar(title: const Text('PARQUET.')),
+              appBar: AppBar(title: const TitreParquet()),
               body: const Center(child: Text("Cet événement n'est plus à venir.")),
             );
           }
           final reponse = _reponse(state);
           final nb = _nbPersonnes ?? ((reponse?.vient ?? false) ? reponse!.nbPersonnes : 1);
           return Scaffold(
-            appBar: AppBar(title: const Text('PARQUET.')),
+            appBar: AppBar(title: const TitreParquet()),
             body: _Infos(event: event, reponse: reponse),
             // Action principale en bas, pleine largeur, dans la zone du pouce (cours 5).
             bottomNavigationBar: event.annule
