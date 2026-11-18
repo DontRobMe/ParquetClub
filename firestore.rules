@@ -1,27 +1,37 @@
 rules_version = '2';
-// Règles du cahier des charges (partie 4) : les droits sont vérifiés par le serveur, pas par l'app.
+// Forfait Spark (sans Cloud Functions) : ces règles sont la seule barrière côté serveur.
+// Le rôle et l'état actif sont lus dans users/{uid}, que seul le bureau peut écrire.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    // Un compte désactivé perd ses droits tout de suite, sans attendre la fin de sa session.
+    function profil() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    // Un compte désactivé perd ses droits tout de suite, sans attendre la fin de sa session (F4).
     function active() {
-      return signedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('disabled', false) == false;
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && profil().get('disabled', false) == false;
     }
-    function isAdmin() { return active() && request.auth.token.role == 'admin'; }
+    function isAdmin() { return active() && profil().role == 'admin'; }
     function isOwner(id) { return active() && request.auth.uid == id; }
-
-    match /users/{uid} {
-      allow read: if isOwner(uid) || isAdmin();
-      allow update: if isOwner(uid)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmToken']);
-    }
 
     // OWASP M4 : mêmes contrôles que l'app (longueurs, https), refaits ici car l'app peut être contournée.
     function texte(v, max) { return v is string && v.size() <= max; }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      // Seul le bureau écrit les profils, jamais le sien : un partenaire ne peut pas se donner le rôle admin,
+      // et un bénévole ne peut pas se désactiver ou se rétrograder par erreur.
+      allow create, update: if isAdmin() && uid != request.auth.uid
+        && request.resource.data.keys().hasOnly(['email', 'role', 'disabled'])
+        && texte(request.resource.data.email, 254)
+        && request.resource.data.role in ['admin', 'partenaire']
+        && request.resource.data.disabled is bool;
+      allow delete: if isAdmin() && uid != request.auth.uid;
+    }
+
     function ficheValide(d) {
       return d.keys().hasOnly(['nom', 'metier', 'secteur', 'description', 'adresse', 'ville',
-                               'telephone', 'email', 'site', 'logoUrl', 'updatedAt'])
+                               'telephone', 'email', 'site', 'logo', 'updatedAt'])
         && texte(d.nom, 80) && d.nom.size() > 0
         && texte(d.metier, 60)
         && d.secteur in ['Artisanat', 'Services', 'Restauration', 'Autre']
@@ -31,25 +41,35 @@ service cloud.firestore {
         && texte(d.telephone, 20)
         && texte(d.email, 254)
         && texte(d.site, 200) && (d.site == '' || d.site.matches('https://.+'))
-        // Logo hébergé chez nous seulement : pas d'image externe qui pisterait les visiteurs (M6).
-        && texte(d.logoUrl, 500) && (d.logoUrl == '' || d.logoUrl.matches('https://firebasestorage[.]googleapis[.]com/.+'));
+        // Logo rangé dans la fiche (pas de Storage sur Spark) : une image, 150 Ko au plus.
+        && (!('logo' in d) || (d.logo is bytes && d.logo.size() <= 150000));
     }
 
     match /partners/{id} {
       allow read: if true;                       // annuaire public (F8)
+      allow create: if isAdmin() && ficheValide(request.resource.data);      // F3
       allow update: if (isOwner(id) || isAdmin()) && ficheValide(request.resource.data);
-      allow create, delete: if false;            // Cloud Functions uniquement
+      allow delete: if isAdmin();                // F5
 
       match /private/{doc} {                     // téléphone personnel (F7)
         allow read: if isOwner(id) || isAdmin();
         allow write: if isOwner(id) && doc == 'contact'
           && request.resource.data.keys().hasOnly(['telephonePerso'])
           && texte(request.resource.data.telephonePerso, 20);
+        allow delete: if isAdmin();              // F5
       }
     }
 
-    match /adminLogs/{id} {                      // journal (F18) : écrit par les Cloud Functions
+    match /adminLogs/{id} {                      // journal (F18)
       allow read: if isAdmin();
+      // Écrit par le bureau, dans le même lot que l'action ; l'auteur est forcément le compte connecté.
+      // Jamais modifié ni effacé.
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['auteur', 'auteurEmail', 'action', 'cible', 'date'])
+        && request.resource.data.auteur == request.auth.uid
+        && request.resource.data.date == request.time
+        && texte(request.resource.data.action, 80)
+        && texte(request.resource.data.cible, 120);
     }
 
     match /events/{eventId} {
@@ -58,8 +78,7 @@ service cloud.firestore {
 
       match /responses/{uid} {
         allow read: if isOwner(uid) || isAdmin();
-        // OWASP M4 : forme de la réponse vérifiée par le serveur ; pas de réponse à un événement annulé.
-        // Pas de delete : les réponses sont effacées par les Cloud Functions.
+        // OWASP M4 : forme de la réponse vérifiée ; pas de réponse à un événement annulé.
         allow create, update: if isOwner(uid)
           && request.resource.data.keys().hasOnly(['vient', 'nbPersonnes', 'updatedAt'])
           && request.resource.data.vient is bool
@@ -67,6 +86,7 @@ service cloud.firestore {
           && request.resource.data.nbPersonnes >= 0
           && request.resource.data.nbPersonnes <= 10
           && get(/databases/$(database)/documents/events/$(eventId)).data.statut != 'annule';
+        allow delete: if isAdmin();              // suppression d'un partenaire (F5), purge à 12 mois (RGPD)
       }
     }
   }

@@ -53,6 +53,17 @@ class EventsCubit extends Cubit<EventsState> {
   Future<void> repondre(String eventId, {required bool vient, int nbPersonnes = 1}) =>
       _repository.repondre(eventId, vient: vient, nbPersonnes: vient ? nbPersonnes : 0);
 
+  /// Vrai si l'écran doit expliquer le rappel avant de demander l'autorisation des notifications.
+  Future<bool> rappelsADemander() async {
+    try {
+      return await _notifications?.permissionADemander() ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> autoriserRappels() async => _notifications?.demanderPermission().catchError((Object _) {});
+
   /// F10. Une modification de date ou de lieu passe l'événement au statut « modifié ».
   /// Même règle que `repondre` : l'écran n'attend pas le serveur.
   Future<void> enregistrer(Event event, {Event? ancien}) {
@@ -70,7 +81,10 @@ class EventsCubit extends Cubit<EventsState> {
     );
   }
 
-  Future<void> annuler(String eventId) => _repository.annuler(eventId);
+  Future<void> annuler(String eventId) {
+    final event = evenement(eventId);
+    return event == null ? Future.value() : _repository.annuler(event);
+  }
 
   void _suivreReponses() {
     final ids = {for (final e in _evenements) e.id};

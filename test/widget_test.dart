@@ -218,26 +218,39 @@ void main() {
     expect(events.annules, ['loge']);
   });
 
-  testWidgets('notifications : explication avant la fenêtre du système, puis activation', (tester) async {
-    await lancer(tester, connecte: true, notificationsADemander: true);
+  Future<void> ouvrirSoiree(WidgetTester tester) async {
+    events.envoyer([soiree]);
     await tester.pump();
-    expect(find.text('Être prévenu des événements'), findsOneWidget);
-    expect(notifications.activations, isEmpty); // rien avant l'accord
+    notifications.ouvertures.add('loge');
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
+  }
 
+  testWidgets('rappel : explication au premier « Je viens », puis fenêtre du système', (tester) async {
+    await lancer(tester, connecte: true, notificationsADemander: true);
+    await ouvrirSoiree(tester);
+    expect(find.text('Un rappel 2 jours avant ?'), findsNothing); // rien avant d'en avoir besoin
+
+    await tester.tap(find.text('Je viens'));
+    await tester.pump();
+    expect(find.text('Un rappel 2 jours avant ?'), findsOneWidget);
+    expect(notifications.demandes, 0); // rien avant l'accord
     await tester.tap(find.text('Continuer'));
     await tester.pump();
-    expect(notifications.activations, ['p1']);
+    expect(notifications.demandes, 1);
   });
 
-  testWidgets('notifications : « Plus tard » ne demande rien au système', (tester) async {
+  testWidgets('rappel : « Non merci » ne demande rien au système', (tester) async {
     await lancer(tester, connecte: true, notificationsADemander: true);
+    await ouvrirSoiree(tester);
+    await tester.tap(find.text('Je viens'));
     await tester.pump();
-    await tester.tap(find.text('Plus tard'));
+    await tester.tap(find.text('Non merci'));
     await tester.pump();
-    expect(notifications.activations, isEmpty);
+    expect(notifications.demandes, 0);
   });
 
-  testWidgets("appui sur une notification : ouvre le détail de l'événement", (tester) async {
+  testWidgets("appui sur un rappel : ouvre le détail de l'événement", (tester) async {
     await lancer(tester, connecte: true);
     events.envoyer([soiree]);
     await tester.pump();

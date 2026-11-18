@@ -22,16 +22,34 @@ class EventDetailPage extends StatefulWidget {
 class _EventDetailPageState extends State<EventDetailPage> {
   /// État purement local du compteur : setState suffit (cahier des charges, partie 4).
   int? _nbPersonnes;
+  bool _rappelPropose = false; // une seule proposition par écran
 
   EventResponse? _reponse(EventsState s) => s is EventsSuccess ? s.reponses[widget.eventId] : null;
 
-  void _repondre(bool vient, int nb) {
+  Future<void> _repondre(bool vient, int nb) async {
     final cubit = context.read<EventsCubit>();
     final messager = ScaffoldMessenger.of(context);
     // Pas d'await : hors ligne, la réponse s'affiche tout de suite « En attente de synchronisation ».
     cubit.repondre(widget.eventId, vient: vient, nbPersonnes: nb).catchError((Object _) {
       messager.showSnackBar(const SnackBar(content: Text("Réponse refusée par le serveur. Réessayez plus tard.")));
     });
+    // « Je viens » programme un rappel : c'est le moment où la permission sert (cours 3, OWASP M6).
+    if (vient && !_rappelPropose && await cubit.rappelsADemander()) {
+      _rappelPropose = true;
+      if (!mounted) return;
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Un rappel 2 jours avant ?'),
+          content: const Text('Parquet peut vous envoyer une notification 2 jours avant cet événement.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Non merci')),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Continuer')),
+          ],
+        ),
+      );
+      if (ok == true) await cubit.autoriserRappels();
+    }
   }
 
   @override

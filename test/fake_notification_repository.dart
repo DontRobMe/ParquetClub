@@ -3,13 +3,12 @@ import 'dart:async';
 import 'package:parquet/features/events/data/event.dart';
 import 'package:parquet/features/notifications/data/notification_repository.dart';
 
-/// Faux FCM et fausses notifications locales : enregistre ce que l'app demande.
+/// Fausses notifications locales : enregistre ce que l'app demande.
 class FakeNotificationRepository implements NotificationRepository {
   FakeNotificationRepository({this.aDemander = false});
 
   bool aDemander;
-  final activations = <String>[];
-  var desactivations = 0;
+  var demandes = 0; // fenêtres système ouvertes
   final rappels = <String, Event>{}; // programmés en ce moment
   final ouvertures = StreamController<String>.broadcast();
 
@@ -17,13 +16,7 @@ class FakeNotificationRepository implements NotificationRepository {
   Future<bool> permissionADemander() async => aDemander;
 
   @override
-  Future<void> activer(String uid) async => activations.add(uid);
-
-  @override
-  Future<void> desactiver() async {
-    desactivations++;
-    rappels.clear();
-  }
+  Future<void> demanderPermission() async => demandes++;
 
   @override
   Stream<String> evenementsOuverts() => ouvertures.stream;

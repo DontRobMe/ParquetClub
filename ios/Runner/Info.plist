@@ -6,10 +6,6 @@
 	<string>Déverrouiller l'espace bureau de Parquet.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Choisir le logo de votre entreprise pour votre fiche.</string>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

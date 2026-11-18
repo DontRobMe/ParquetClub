@@ -26,10 +26,15 @@ class FakeAdminRepository implements AdminRepository {
   Future<void> creerPartenaire({required String nom, required String email}) => _action('creer:$nom:$email');
 
   @override
-  Future<void> changerAcces(String uid, {required bool actif}) => _action('acces:$uid:$actif');
+  Future<void> changerAcces(String uid, {required bool actif, required String nom}) => _action('acces:$uid:$actif');
 
   @override
-  Future<void> supprimerPartenaire(String uid) => _action('supprimer:$uid');
+  Future<void> supprimerPartenaire(String uid, {required String nom}) => _action('supprimer:$uid');
+
+  var purges = 0;
+
+  @override
+  Future<void> purgerReponsesAnciennes() async => purges++;
 
   @override
   Future<String> telephonePerso(String uid) async => '06 11 22 33 44';

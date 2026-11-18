@@ -30,27 +30,6 @@ jobs:
       - run: flutter analyze
       - run: flutter test
 
-  functions:
-    name: Cloud Functions
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: functions
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: functions/package-lock.json
-      - run: npm ci
-      # Le module doit se charger et exporter les 5 fonctions.
-      - run: >
-          node -e "process.env.GCLOUD_PROJECT='ci';
-          process.env.FIREBASE_CONFIG=JSON.stringify({projectId:'ci',storageBucket:'ci.appspot.com'});
-          const n = Object.keys(require('./index.js')).length; if (n !== 5) throw new Error(n + ' fonctions');"
-      - run: node --check scripts/creer-admin.js
-
   android:
     name: Build Android
     needs: verifier

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../admin/data/admin_repository.dart' show ajouterAuJournal;
 import 'event.dart';
 
 typedef EvenementsSnapshot = ({List<Event> evenements, bool horsLigne});
@@ -42,14 +43,28 @@ class EventRepository {
       _reponse(eventId).set({'vient': vient, 'nbPersonnes': nbPersonnes, 'updatedAt': FieldValue.serverTimestamp()});
 
   /// F10, bureau uniquement (règle `isAdmin`). Un identifiant vide crée l'événement.
-  /// La Cloud Function `notifierEvenement` envoie ensuite le push aux partenaires.
+  /// L'événement et son entrée de journal (F18) partent dans le même lot.
+  /// Hors ligne, le lot est appliqué au cache tout de suite et envoyé au retour du réseau.
   Future<void> enregistrer(Event event) {
     final evenements = _firestore.collection('events');
-    return (event.id.isEmpty ? evenements.doc() : evenements.doc(event.id)).set(event.toMap());
+    final ref = event.id.isEmpty ? evenements.doc() : evenements.doc(event.id);
+    final lot = _firestore.batch()..set(ref, event.toMap());
+    ajouterAuJournal(
+      _firestore,
+      _auth,
+      lot,
+      event.id.isEmpty ? "création de l'événement" : "modification de l'événement",
+      event.titre,
+    );
+    return lot.commit();
   }
 
-  Future<void> annuler(String eventId) =>
-      _firestore.collection('events').doc(eventId).update({'statut': EventStatut.annule.name});
+  Future<void> annuler(Event event) {
+    final lot = _firestore.batch()
+      ..update(_firestore.collection('events').doc(event.id), {'statut': EventStatut.annule.name});
+    ajouterAuJournal(_firestore, _auth, lot, "annulation de l'événement", event.titre);
+    return lot.commit();
+  }
 
   DocumentReference<Map<String, dynamic>> _reponse(String eventId) =>
       _firestore.collection('events').doc(eventId).collection('responses').doc(_uid);

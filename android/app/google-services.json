@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "299843166994",
+    "project_id": "parquetclub",
+    "storage_bucket": "parquetclub.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:299843166994:android:3870fc7cde3682a3b649cb",
+        "android_client_info": {
+          "package_name": "fr.parquetclub.parquet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWnU9cFZbPRVSe5z75KY4AQO1DtCqbbY8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

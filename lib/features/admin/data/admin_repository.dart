@@ -1,6 +1,8 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 /// Compte vu par le bureau : `users/{uid}`.
 class Compte {
@@ -20,7 +22,7 @@ class ReponseBureau {
   final int nbPersonnes;
 }
 
-/// Ligne du journal des actions du bureau (F18), écrite par les Cloud Functions.
+/// Ligne du journal des actions du bureau (F18).
 class EntreeJournal {
   const EntreeJournal({required this.auteur, required this.action, required this.cible, this.date});
 
@@ -36,17 +38,18 @@ class AdminErreur implements Exception {
   final String message;
 }
 
-/// Seule classe du bureau qui connaît Firebase. Les actions sensibles passent par les Cloud Functions,
-/// qui revérifient le rôle : masquer un bouton ne protège rien (OWASP M3).
+/// Seule classe du bureau qui connaît Firebase.
+/// Forfait Spark (sans Cloud Functions) : les actions du bureau sont faites depuis son téléphone, et ce sont
+/// les règles Firestore qui vérifient qu'il est bien admin. Masquer un bouton ne protège rien (OWASP M3).
 class AdminRepository {
-  AdminRepository([FirebaseFirestore? firestore, FirebaseFunctions? functions, FirebaseAuth? auth])
+  AdminRepository([FirebaseFirestore? firestore, FirebaseAuth? auth])
     : _firestore = firestore ?? FirebaseFirestore.instance,
-      _functions = functions ?? FirebaseFunctions.instanceFor(region: 'europe-west9'),
       _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseFirestore _firestore;
-  final FirebaseFunctions _functions;
   final FirebaseAuth _auth;
+
+  static const _horsLigne = 'Pas de connexion internet. Réessayez une fois en ligne.';
 
   /// Comptes partenaires (les comptes du bureau ne sont pas listés).
   Stream<List<Compte>> ecouterComptes() => _firestore
@@ -60,18 +63,93 @@ class AdminRepository {
         ],
       );
 
-  /// F3. Le partenaire reçoit ensuite l'e-mail Firebase pour choisir lui-même son mot de passe.
+  /// F3. Le compte est créé avec un mot de passe aléatoire que personne ne voit ; le partenaire reçoit
+  /// ensuite l'e-mail Firebase pour choisir le sien.
   Future<void> creerPartenaire({required String nom, required String email}) async {
-    await _appeler('creerPartenaire', {'nom': nom, 'email': email});
+    // Une seconde instance de Firebase : créer un compte connecte ce compte, et le bénévole doit rester connecté.
+    final secondaire = await Firebase.initializeApp(
+      name: 'creation-compte',
+      options: Firebase.app().options,
+    ).catchError((Object _) => Firebase.app('creation-compte'));
+    final authSecondaire = FirebaseAuth.instanceFor(app: secondaire);
+    final String uid;
+    try {
+      final compte = await authSecondaire.createUserWithEmailAndPassword(email: email, password: _motDePasseJetable());
+      uid = compte.user!.uid;
+    } on FirebaseAuthException catch (e) {
+      throw AdminErreur(switch (e.code) {
+        'email-already-in-use' => 'Un compte existe déjà avec cet e-mail.',
+        'invalid-email' => "Cet e-mail n'est pas valide.",
+        'network-request-failed' => _horsLigne,
+        _ => 'Le compte n\'a pas pu être créé. Réessayez.',
+      });
+    } finally {
+      await authSecondaire.signOut();
+    }
+
+    final lot = _firestore.batch()
+      ..set(_firestore.collection('users').doc(uid), {'email': email, 'role': 'partenaire', 'disabled': false})
+      ..set(_firestore.collection('partners').doc(uid), {
+        'nom': nom,
+        'metier': '',
+        'secteur': 'Autre',
+        'description': '',
+        'adresse': '',
+        'ville': '',
+        'telephone': '',
+        'email': '',
+        'site': '',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    _journal(lot, 'création du compte', nom);
+    await _ecrire(lot);
     await envoyerLienMotDePasse(email);
   }
 
-  /// F4.
-  Future<void> changerAcces(String uid, {required bool actif}) =>
-      _appeler('changerAcces', {'uid': uid, 'actif': actif});
+  /// F4. Les règles Firestore refusent aussitôt toute lecture et écriture au compte désactivé,
+  /// et l'app le déconnecte dès qu'elle voit le changement.
+  Future<void> changerAcces(String uid, {required bool actif, required String nom}) async {
+    final lot = _firestore.batch()..update(_firestore.collection('users').doc(uid), {'disabled': !actif});
+    _journal(lot, actif ? "réactivation de l'accès" : "désactivation de l'accès", nom);
+    await _ecrire(lot);
+  }
 
-  /// F5.
-  Future<void> supprimerPartenaire(String uid) => _appeler('supprimerPartenaire', {'uid': uid});
+  /// F5. Efface la fiche (logo compris), le numéro privé, les réponses et le profil.
+  /// Sans Cloud Functions, l'app ne peut pas supprimer le compte de connexion d'un autre : le bureau
+  /// le supprime ensuite dans la console Firebase (Authentication).
+  Future<void> supprimerPartenaire(String uid, {required String nom}) async {
+    try {
+      final evenements = await _firestore.collection('events').get();
+      final lot = _firestore.batch();
+      // ponytail: un seul lot de 500 écritures, soit environ 495 événements ; découper au-delà.
+      for (final e in evenements.docs) {
+        lot.delete(e.reference.collection('responses').doc(uid));
+      }
+      lot
+        ..delete(_firestore.collection('partners').doc(uid).collection('private').doc('contact'))
+        ..delete(_firestore.collection('partners').doc(uid))
+        ..delete(_firestore.collection('users').doc(uid));
+      _journal(lot, 'suppression du partenaire', nom);
+      await lot.commit();
+    } on FirebaseException {
+      throw const AdminErreur(_horsLigne);
+    }
+  }
+
+  /// RGPD : les réponses sont effacées 12 mois après l'événement. Lancé à l'ouverture de l'espace bureau.
+  Future<void> purgerReponsesAnciennes() async {
+    final limite = DateTime.now().subtract(const Duration(days: 365));
+    final anciens = await _firestore.collection('events').where('date', isLessThan: Timestamp.fromDate(limite)).get();
+    for (final e in anciens.docs) {
+      final reponses = await e.reference.collection('responses').get();
+      if (reponses.docs.isEmpty) continue;
+      final lot = _firestore.batch();
+      for (final r in reponses.docs) {
+        lot.delete(r.reference);
+      }
+      await lot.commit();
+    }
+  }
 
   /// F2 côté bureau : déclenche le lien, sans jamais voir de mot de passe.
   Future<void> envoyerLienMotDePasse(String email) async {
@@ -123,19 +201,33 @@ class AdminRepository {
         ],
       );
 
-  Future<void> _appeler(String fonction, Map<String, Object?> donnees) async {
+  /// Ajoute l'entrée du journal dans le même lot que l'action : les deux réussissent ou échouent ensemble.
+  void _journal(WriteBatch lot, String action, String cible) => ajouterAuJournal(_firestore, _auth, lot, action, cible);
+
+  Future<void> _ecrire(WriteBatch lot) async {
     try {
-      await _functions.httpsCallable(fonction).call<void>(donnees);
-    } on FirebaseFunctionsException catch (e) {
-      throw AdminErreur(switch (e.code) {
-        'unavailable' || 'deadline-exceeded' => 'Pas de connexion internet. Réessayez une fois en ligne.',
-        // Messages écrits par nos Cloud Functions, déjà en français.
-        'already-exists' ||
-        'invalid-argument' ||
-        'failed-precondition' ||
-        'permission-denied' => e.message ?? 'Action refusée.',
-        _ => 'Action impossible pour le moment. Réessayez.',
-      });
+      await lot.commit();
+    } on FirebaseException {
+      throw const AdminErreur(_horsLigne);
     }
   }
+}
+
+/// Entrée du journal (F18). Les règles vérifient que l'auteur est bien le compte connecté.
+void ajouterAuJournal(FirebaseFirestore firestore, FirebaseAuth auth, WriteBatch lot, String action, String cible) {
+  final moi = auth.currentUser;
+  lot.set(firestore.collection('adminLogs').doc(), {
+    'auteur': moi?.uid,
+    'auteurEmail': moi?.email ?? '',
+    'action': action,
+    'cible': cible,
+    'date': FieldValue.serverTimestamp(),
+  });
+}
+
+/// 32 caractères aléatoires (générateur cryptographique), jamais affichés ni stockés.
+String _motDePasseJetable() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#%&*';
+  final hasard = Random.secure();
+  return List.generate(32, (_) => alphabet[hasard.nextInt(alphabet.length)]).join();
 }

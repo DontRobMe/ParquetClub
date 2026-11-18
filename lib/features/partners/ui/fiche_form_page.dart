@@ -63,7 +63,7 @@ class _FicheFormPageState extends State<FicheFormPage> {
         telephone: _telephone.text,
         email: _email.text,
         site: _site.text,
-        logoUrl: widget.fiche.logoUrl,
+        logo: widget.fiche.logo,
       ),
       telephonePerso: _telephonePerso.text,
       surRefus: () => messager.showSnackBar(

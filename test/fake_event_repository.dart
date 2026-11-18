@@ -32,7 +32,7 @@ class FakeEventRepository implements EventRepository {
   Future<void> enregistrer(Event event) async => enregistres.add(event);
 
   @override
-  Future<void> annuler(String eventId) async => annules.add(eventId);
+  Future<void> annuler(Event event) async => annules.add(event.id);
 
   void envoyer(List<Event> liste, {bool horsLigne = false}) =>
       evenements.add((evenements: liste, horsLigne: horsLigne));
