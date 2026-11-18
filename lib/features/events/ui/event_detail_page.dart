@@ -3,9 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../../../core/format_date.dart';
+import '../../admin/ui/evenement_bureau_page.dart';
+import '../../auth/logic/auth_cubit.dart';
+import '../../auth/logic/auth_state.dart';
 import '../data/event.dart';
 import '../logic/events_cubit.dart';
 import '../logic/events_state.dart';
+import 'etiquette_type.dart';
 import 'evenements_page.dart';
 
 const _maxPersonnes = 10; // même borne que les règles Firestore
@@ -70,6 +74,9 @@ class _EventDetailPageState extends State<EventDetailPage> {
             );
           }
           final reponse = _reponse(state);
+          // F12 est réservée aux partenaires : le bureau suit les réponses, il ne répond pas.
+          final auth = context.read<AuthCubit>().state;
+          final bureau = auth is AuthConnecte && auth.session.estAdmin;
           final nb = _nbPersonnes ?? ((reponse?.vient ?? false) ? reponse!.nbPersonnes : 1);
           return Scaffold(
             appBar: AppBar(title: const TitreParquet()),
@@ -77,6 +84,18 @@ class _EventDetailPageState extends State<EventDetailPage> {
             // Action principale en bas, pleine largeur, dans la zone du pouce (cours 5).
             bottomNavigationBar: event.annule
                 ? null
+                : bureau
+                ? SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                      child: FilledButton(
+                        onPressed: () =>
+                            Navigator.of(context)
+                                .push(MaterialPageRoute<void>(builder: (_) => EvenementBureauPage(eventId: event.id))),
+                        child: const Text('Voir les réponses'),
+                      ),
+                    ),
+                  )
                 : SafeArea(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
@@ -114,8 +133,7 @@ class _Infos extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       children: [
-        if (event.type.isNotEmpty)
-          Text(event.type, style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary)),
+        if (event.type.isNotEmpty) ...[EtiquetteType(event.type), const SizedBox(height: 6)],
         Semantics(header: true, child: Text(event.titre.toUpperCase(), style: theme.textTheme.headlineLarge)),
         const SizedBox(height: 8),
         Text('${dateLongue(event.date)} · ${heure(event.date)}', style: secondaire),

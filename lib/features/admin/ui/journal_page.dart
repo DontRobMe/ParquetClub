@@ -60,9 +60,14 @@ class _Ligne extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        title: Text('${entree.action} : ${entree.cible}', style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(
+          '${_majuscule(entree.action)} : ${entree.cible}',
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
         subtitle: Text([entree.auteur, if (date != null) '${dateLongue(date)} · ${heure(date)}'].join(' · ')),
       ),
     );
   }
 }
+
+String _majuscule(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
