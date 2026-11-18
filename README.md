@@ -2,6 +2,10 @@
 
 App Flutter (Android + iOS) du réseau partenaires du club de basket : annuaire public, invitations avec réponse « Je viens », notifications. Serveur : Firebase (région europe-west9).
 
+## Documentation
+
+Cahier des charges, maquette, charte et fiches des stores : voir [docs/](docs/README.md).
+
 ## Lancer
 
 ```bash
