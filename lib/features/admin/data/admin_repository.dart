@@ -78,7 +78,11 @@ class AdminRepository {
       uid = compte.user!.uid;
     } on FirebaseAuthException catch (e) {
       throw AdminErreur(switch (e.code) {
-        'email-already-in-use' => 'Un compte existe déjà avec cet e-mail.',
+        // Souvent un partenaire supprimé qui ne s'est pas reconnecté depuis : son compte de connexion existe encore
+        // (forfait Spark, voir supprimerPartenaire) et seule la console peut l'effacer.
+        'email-already-in-use' =>
+          'Un compte de connexion existe déjà pour cet e-mail. S\'il s\'agit d\'un partenaire supprimé, '
+              'effacez-le dans la console Firebase (Authentication), puis réessayez.',
         'invalid-email' => "Cet e-mail n'est pas valide.",
         'network-request-failed' => _horsLigne,
         _ => 'Le compte n\'a pas pu être créé. Réessayez.',
