@@ -201,34 +201,54 @@ class _Ligne extends StatelessWidget {
       heure(event.date),
       ?texteStatut(event, reponse),
     ].join(' · ');
+    // Ligne maison plutôt qu'un ListTile : ListTile bloque la hauteur de la pastille,
+    // qui débordait avec le texte agrandi (WCAG 1.4.4).
     return Card(
       margin: EdgeInsets.zero,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        leading: Semantics(
-          label: dateLongue(event.date),
-          child: ExcludeSemantics(
-            child: Container(
-              width: 48,
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              decoration: BoxDecoration(color: theme.colorScheme.outline, borderRadius: BorderRadius.circular(8)),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('${event.date.day}', style: theme.textTheme.titleLarge?.copyWith(height: 1)),
-                  Text(moisCourt(event.date), style: theme.textTheme.labelSmall),
-                ],
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => ouvrirEvenement(context, event.id),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Semantics(
+                label: dateLongue(event.date),
+                child: ExcludeSemantics(
+                  child: Container(
+                    constraints: const BoxConstraints(minWidth: 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    decoration: BoxDecoration(color: theme.colorScheme.outline, borderRadius: BorderRadius.circular(8)),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('${event.date.day}', style: theme.textTheme.titleLarge?.copyWith(height: 1)),
+                        Text(moisCourt(event.date), style: theme.textTheme.labelSmall),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      event.titre,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        decoration: event.annule ? TextDecoration.lineThrough : null,
+                      ),
+                    ),
+                    Text(details, style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward),
+            ],
           ),
         ),
-        title: Text(
-          event.titre,
-          style: TextStyle(fontWeight: FontWeight.w700, decoration: event.annule ? TextDecoration.lineThrough : null),
-        ),
-        subtitle: Text(details),
-        trailing: const Icon(Icons.arrow_forward),
-        onTap: () => ouvrirEvenement(context, event.id),
       ),
     );
   }

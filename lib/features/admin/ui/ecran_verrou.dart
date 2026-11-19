@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/widgets/defilable.dart';
 import '../logic/verrou_cubit.dart';
 
 /// Recouvre toute l'app du bureau tant qu'elle est verrouillée. L'app reste en place dessous :
@@ -60,7 +61,7 @@ class _Verrou extends StatelessWidget {
     return Material(
       color: scheme.secondary,
       child: SafeArea(
-        child: Padding(
+        child: PleinEcranDefilant(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
