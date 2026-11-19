@@ -115,8 +115,8 @@ class AdminRepository {
   }
 
   /// F5. Efface la fiche (logo compris), le numéro privé, les réponses et le profil.
-  /// Sans Cloud Functions, l'app ne peut pas supprimer le compte de connexion d'un autre : le bureau
-  /// le supprime ensuite dans la console Firebase (Authentication).
+  /// Sans Cloud Functions, l'app ne peut pas supprimer le compte de connexion d'un autre : il s'efface
+  /// lui-même à sa prochaine tentative de connexion (AuthRepository.connecter).
   Future<void> supprimerPartenaire(String uid, {required String nom}) async {
     try {
       final evenements = await _firestore.collection('events').get();
