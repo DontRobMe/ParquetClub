@@ -79,7 +79,8 @@ service cloud.firestore {
       match /responses/{uid} {
         allow read: if isOwner(uid) || isAdmin();
         // OWASP M4 : forme de la réponse vérifiée ; pas de réponse à un événement annulé.
-        allow create, update: if isOwner(uid)
+        // F12 réservée aux partenaires : le bureau suit les réponses, il ne répond pas.
+        allow create, update: if isOwner(uid) && profil().role == 'partenaire'
           && request.resource.data.keys().hasOnly(['vient', 'nbPersonnes', 'updatedAt'])
           && request.resource.data.vient is bool
           && request.resource.data.nbPersonnes is int
