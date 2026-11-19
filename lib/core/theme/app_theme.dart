@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 /// Seul fichier qui connaît les couleurs et les polices (cours 5) :
 /// les écrans lisent Theme.of(context), ils ne répètent jamais une valeur.
 abstract final class AppColors {
-  static const rouge = Color(0xFFE30613); // action principale ; texte blanc dessus = 4,9:1
+  static const rouge = Color(0xFFE30613); // action principale ; texte blanc dessus = 4,6:1
+  // Le rouge de la charte n'atteint que 4,4:1 sur le fond beige : trop peu pour du texte (WCAG 1.4.3).
+  // Liens, erreurs et étiquettes en rouge foncé : 5,9:1 sur le fond.
+  static const rougeTexte = Color(0xFFC00510);
+  static const rougeClair = Color(0xFFFCEDEE); // fond des étiquettes
   static const noir = Color(0xFF000000); // barres, lancement
   static const blanc = Color(0xFFFFFFFF); // cartes, texte sur rouge ou noir
   static const fond = Color(0xFFF6F4F0);
@@ -20,13 +24,15 @@ abstract final class AppTheme {
     const scheme = ColorScheme.light(
       primary: AppColors.rouge,
       onPrimary: AppColors.blanc,
+      primaryContainer: AppColors.rougeClair,
+      onPrimaryContainer: AppColors.rougeTexte,
       secondary: AppColors.noir,
       onSecondary: AppColors.blanc,
       surface: AppColors.blanc,
       onSurface: AppColors.encre,
       onSurfaceVariant: AppColors.texteSecondaire,
       outline: AppColors.contour,
-      error: AppColors.rouge,
+      error: AppColors.rougeTexte,
       onError: AppColors.blanc,
     );
 
@@ -71,6 +77,9 @@ abstract final class AppTheme {
           shape: RoundedRectangleBorder(borderRadius: radius),
           textStyle: const TextStyle(fontFamily: _texte, fontWeight: FontWeight.w700),
         ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: AppColors.rougeTexte, minimumSize: const Size(48, 48)),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(

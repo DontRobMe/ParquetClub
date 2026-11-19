@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:parquet/core/widgets/defilable.dart';
 import 'package:parquet/core/widgets/titre_parquet.dart';
 
 /// Accueil du club pour un visiteur : courte présentation, puis l'annuaire ou la connexion.
@@ -35,7 +36,7 @@ class AccueilPage extends StatelessWidget {
             ),
           ),
           SafeArea(
-            child: Padding(
+            child: PleinEcranDefilant(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
