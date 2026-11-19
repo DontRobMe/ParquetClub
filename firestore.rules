@@ -18,7 +18,8 @@ service cloud.firestore {
     function texte(v, max) { return v is string && v.size() <= max; }
 
     match /users/{uid} {
-      allow read: if isOwner(uid) || isAdmin();
+      // Lisible par son titulaire même désactivé ou supprimé : la connexion doit pouvoir le constater (F4, F5).
+      allow read: if (signedIn() && request.auth.uid == uid) || isAdmin();
       // Seul le bureau écrit les profils, jamais le sien : un partenaire ne peut pas se donner le rôle admin,
       // et un bénévole ne peut pas se désactiver ou se rétrograder par erreur.
       allow create, update: if isAdmin() && uid != request.auth.uid
