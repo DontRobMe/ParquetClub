@@ -145,8 +145,14 @@ void main() {
     events.confirmerServeur();
     await tester.pump();
     await tester.pump();
-    expect(find.text('Vous venez à 2'), findsOneWidget);
+    expect(find.text('Vous venez · 2 personnes'), findsOneWidget);
     expect(find.text('Réponse envoyée au club.'), findsOneWidget);
+
+    // De retour sur l'agenda : la réponse est sur la prochaine invitation
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('Vous venez · 2 personnes'), findsOneWidget);
+    expect(find.text('Voir ma réponse'), findsOneWidget);
   });
 
   testWidgets('se déconnecter demande confirmation puis revient en visiteur', (tester) async {

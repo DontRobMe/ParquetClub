@@ -55,7 +55,7 @@ class _Agenda extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.only(bottom: 32),
             children: [
-              if (prochain != null) _ProchaineInvitation(prochain),
+              if (prochain != null) _ProchaineInvitation(prochain, state.reponses[prochain.id]),
               if (suivants.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
@@ -79,14 +79,16 @@ class _Agenda extends StatelessWidget {
 
 /// Visuel, date et action dans la même zone (charte : référence NBA App).
 class _ProchaineInvitation extends StatelessWidget {
-  const _ProchaineInvitation(this.event);
+  const _ProchaineInvitation(this.event, this.reponse);
 
   final Event event;
+  final EventResponse? reponse;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     const blanc = TextStyle(color: Colors.white);
+    final statut = texteStatut(event, reponse);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -154,10 +156,27 @@ class _ProchaineInvitation extends StatelessWidget {
                     ),
                   ],
                 ),
+              // Sa réponse visible sans ouvrir l'invitation (maquette).
+              if (statut != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      reponse!.enAttente ? Icons.schedule : Icons.check_circle_outline,
+                      size: 20,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(statut, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 12),
               FilledButton.icon(
                 icon: const Icon(Icons.arrow_forward),
-                label: const Text("Répondre à l'invitation"),
+                label: Text(reponse == null ? "Répondre à l'invitation" : 'Voir ma réponse'),
                 onPressed: () => ouvrirEvenement(context, event.id),
               ),
             ],
@@ -221,7 +240,8 @@ String? texteStatut(Event event, EventResponse? reponse) {
   return switch (reponse) {
     null => null,
     EventResponse(enAttente: true) => 'En attente de synchronisation',
-    EventResponse(vient: true, :final nbPersonnes) => 'Vous venez à $nbPersonnes',
+    EventResponse(vient: true, :final nbPersonnes) =>
+      'Vous venez · $nbPersonnes ${nbPersonnes > 1 ? 'personnes' : 'personne'}',
     EventResponse(vient: false) => 'Vous ne venez pas',
   };
 }
