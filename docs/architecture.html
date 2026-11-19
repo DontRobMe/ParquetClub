@@ -1,0 +1,74 @@
+<!doctype html>
+<!-- Source de architecture.png. Régénérer :
+     msedge --headless --hide-scrollbars --window-size=1340,1000 --screenshot=architecture.png architecture.html -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Architecture Parquet</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { width: 1340px; height: 1000px; padding: 32px 40px; background: #fff; color: #1f1f1f;
+         font-family: "Segoe UI", Inter, Arial, sans-serif; }
+  h1 { font-size: 25px; font-weight: 600; margin-bottom: 30px; }
+  .zone { border: 2px dashed #d6d6d6; border-radius: 14px; padding: 18px 28px 26px; }
+  .zone > .titre { font-size: 21px; font-weight: 600; color: #555; margin-bottom: 16px; }
+  .boite { border: 2px solid #cfcfca; border-radius: 12px; padding: 16px 28px; background: #fff; }
+  .boite b { display: block; font-size: 21px; font-weight: 600; margin-bottom: 4px; }
+  .boite span { font-size: 18px; color: #444; line-height: 1.45; }
+  .repo { border-color: #2f7de1; background: #e6eff9; }
+  .fleches { position: relative; height: 56px; }
+  .f { position: absolute; top: 0; height: 56px; border-left: 2px solid #c5c5c0; }
+  .f::after { content: ""; position: absolute; left: -7px; border: 6px solid transparent; }
+  .bas::after { bottom: 0; border-top: 9px solid #c5c5c0; border-bottom: 0; }
+  .haut::after { top: 0; border-bottom: 9px solid #c5c5c0; border-top: 0; }
+  .f em { position: absolute; left: 14px; top: 14px; font-style: normal; font-size: 18px; color: #555; white-space: nowrap; }
+  .bas-zones { display: grid; grid-template-columns: 1fr 1.55fr; gap: 28px; }
+  .grille { display: grid; gap: 16px; }
+  .centre { text-align: center; padding: 12px 16px; }
+  .centre b { font-size: 20px; }
+  .centre span { font-size: 17px; }
+  .note { font-size: 17px; color: #555; margin-top: 16px; line-height: 1.4; }
+</style>
+</head>
+<body>
+  <h1>Les écrans passent par le Cubit et le repository pour joindre Firebase et le téléphone</h1>
+
+  <div class="zone">
+    <div class="titre">Application Flutter · architecture MVVM</div>
+    <div class="boite"><b>Vue : écrans et widgets</b><span>Affiche l’état et envoie les actions ; n’appelle jamais Firebase</span></div>
+    <div class="fleches">
+      <div class="f bas" style="left:460px"><em>action</em></div>
+      <div class="f haut" style="left:742px"><em>nouvel état</em></div>
+    </div>
+    <div class="boite"><b>Cubit (ViewModel)</b><span>Events, Partners, Profile, Auth, Admin + Reponses, Journal, Verrou : état immuable, une méthode par action</span></div>
+    <div class="fleches">
+      <div class="f bas" style="left:460px"><em>appel</em></div>
+      <div class="f haut" style="left:742px"><em>données</em></div>
+    </div>
+    <div class="boite repo"><b>Repository</b><span>Event, Partner, Auth, Admin, Notification, Verrou : seuls à connaître Firebase et le téléphone</span></div>
+  </div>
+
+  <div class="fleches">
+    <div class="f bas" style="left:230px"><em>Notification, Verrou, Partner (photo)</em></div>
+    <div class="f bas" style="left:760px"><em>Event, Partner, Auth, Admin</em></div>
+  </div>
+
+  <div class="bas-zones">
+    <div class="zone">
+      <div class="titre">Téléphone</div>
+      <div class="grille">
+        <div class="boite centre"><b>Cache Firestore</b><span>copie locale tenue par Firestore : affichée hors ligne, écritures envoyées au retour du réseau</span></div>
+        <div class="boite centre"><b>Système</b><span>rappels locaux J-2, biométrie et Keystore / Keychain, sélecteur photo</span></div>
+      </div>
+    </div>
+    <div class="zone">
+      <div class="titre">Firebase · forfait Spark gratuit, Europe (Paris)</div>
+      <div class="grille" style="grid-template-columns: 1fr 1fr">
+        <div class="boite centre"><b>Auth</b><span>comptes, connexion, réinitialisation</span></div>
+        <div class="boite centre"><b>Firestore</b><span>rôles, fiches et logos, événements, réponses, journal</span></div>
+      </div>
+      <div class="note">Ni Storage, ni Cloud Functions, ni push serveur : les règles Firestore sont la seule barrière côté serveur.</div>
+    </div>
+  </div>
+</body>
+</html>
