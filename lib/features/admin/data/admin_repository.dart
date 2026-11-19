@@ -78,7 +78,11 @@ class AdminRepository {
       uid = compte.user!.uid;
     } on FirebaseAuthException catch (e) {
       throw AdminErreur(switch (e.code) {
-        'email-already-in-use' => 'Un compte existe déjà avec cet e-mail.',
+        // Souvent un partenaire supprimé qui ne s'est pas reconnecté depuis : son compte de connexion existe encore
+        // (forfait Spark, voir supprimerPartenaire) et seule la console peut l'effacer.
+        'email-already-in-use' =>
+          'Un compte de connexion existe déjà pour cet e-mail. S\'il s\'agit d\'un partenaire supprimé, '
+              'effacez-le dans la console Firebase (Authentication), puis réessayez.',
         'invalid-email' => "Cet e-mail n'est pas valide.",
         'network-request-failed' => _horsLigne,
         _ => 'Le compte n\'a pas pu être créé. Réessayez.',
@@ -115,8 +119,8 @@ class AdminRepository {
   }
 
   /// F5. Efface la fiche (logo compris), le numéro privé, les réponses et le profil.
-  /// Sans Cloud Functions, l'app ne peut pas supprimer le compte de connexion d'un autre : le bureau
-  /// le supprime ensuite dans la console Firebase (Authentication).
+  /// Sans Cloud Functions, l'app ne peut pas supprimer le compte de connexion d'un autre : il s'efface
+  /// lui-même à sa prochaine tentative de connexion (AuthRepository.connecter).
   Future<void> supprimerPartenaire(String uid, {required String nom}) async {
     try {
       final evenements = await _firestore.collection('events').get();

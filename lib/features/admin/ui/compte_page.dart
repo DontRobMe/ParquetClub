@@ -100,17 +100,14 @@ class _ComptePageState extends State<ComptePage> {
                           titre: 'Supprimer $nom ?',
                           texte:
                               'La fiche, le logo, le numéro privé et les réponses aux événements seront effacés '
-                              'définitivement. Il restera à supprimer son compte de connexion dans la console Firebase.',
+                              'définitivement, et il ne pourra plus se connecter.',
                           action: 'Supprimer',
                         )) {
                           return;
                         }
                         await _executer(
                           () => cubit.supprimer(compte.uid, nom: nom),
-                          // Forfait Spark : l'app ne peut pas supprimer le compte de connexion d'un autre.
-                          succes:
-                              'Partenaire supprimé. Supprimez aussi ${compte.email} dans la console '
-                              'Firebase (Authentication).',
+                          succes: 'Partenaire supprimé.',
                           fermer: true,
                         );
                       },

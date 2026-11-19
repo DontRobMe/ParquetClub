@@ -80,7 +80,13 @@ class AuthRepository {
     final profil = await _profil(resultat.user!.uid)
         .get()
         .catchError((Object _) => throw const AuthErreur('Pas de connexion internet. Réessayez une fois en ligne.'));
-    if (!profil.exists || profil.data()?['disabled'] == true) {
+    if (!profil.exists) {
+      // Partenaire supprimé par le bureau. Sans Cloud Functions (forfait Spark), seul le compte lui-même peut
+      // effacer sa connexion : il le fait ici, juste après s'être connecté (Firebase l'exige).
+      await resultat.user!.delete().catchError((Object _) => _auth.signOut());
+      throw const AuthErreur('Ce compte a été supprimé. Contactez le bureau du club.');
+    }
+    if (profil.data()?['disabled'] == true) {
       await _auth.signOut();
       throw const AuthErreur('Ce compte est désactivé. Contactez le bureau du club.');
     }
