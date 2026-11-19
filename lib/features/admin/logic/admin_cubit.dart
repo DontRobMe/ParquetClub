@@ -75,6 +75,15 @@ class ReponsesCubit extends Cubit<ReponsesState> {
   final String eventId;
   StreamSubscription<List<ReponseBureau>>? _abonnement;
 
+  Future<String?> emarger(String uid, bool present) async {
+    try {
+      await _repository.emarger(eventId, uid, present);
+      return null;
+    } on AdminErreur catch (e) {
+      return e.message;
+    }
+  }
+
   void charger() {
     emit(const ReponsesLoading());
     _abonnement?.cancel();

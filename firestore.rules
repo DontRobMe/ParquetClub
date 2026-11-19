@@ -75,19 +75,55 @@ service cloud.firestore {
 
     match /events/{eventId} {
       allow read: if active();                   // réservé aux comptes connectés
-      allow write: if isAdmin();
+      allow create, update: if isAdmin()
+        && (!('photo' in request.resource.data)
+          || (request.resource.data.photo is bytes && request.resource.data.photo.size() <= 450000));
+      allow delete: if isAdmin();
 
       match /responses/{uid} {
+        function evenement() {
+          return get(/databases/$(database)/documents/events/$(eventId)).data;
+        }
+        function partenaire() {
+          return isOwner(uid) && profil().role == 'partenaire';
+        }
+        function reponseValide() {
+          let d = request.resource.data;
+          return d.vient is bool && d.nbPersonnes is int
+            && d.nbPersonnes >= 0 && d.nbPersonnes <= 10;
+        }
+        function peutRepondre() {
+          return partenaire() && evenement().statut != 'annule' && request.time < evenement().date;
+        }
+        function suiviDisponible() {
+          return evenement().statut != 'annule'
+            && request.time < evenement().date + duration.value(365, 'd');
+        }
+        function peutEmarger() {
+          // Le bureau ouvre l'interface à minuit en heure locale. Le serveur borne la fenêtre à J-1.
+          return isAdmin() && suiviDisponible()
+            && request.time >= evenement().date - duration.value(1, 'd')
+            && request.resource.data.presence is bool;
+        }
+        function peutNoter() {
+          let d = request.resource.data;
+          return partenaire() && suiviDisponible() && request.time >= evenement().date
+            && resource.data.get('presence', false) == true && !('note' in resource.data)
+            && d.note is int && d.note >= 1 && d.note <= 5 && texte(d.commentaire, 500);
+        }
+
         allow read: if isOwner(uid) || isAdmin();
-        // OWASP M4 : forme de la réponse vérifiée ; pas de réponse à un événement annulé.
-        // F12 réservée aux partenaires : le bureau suit les réponses, il ne répond pas.
-        allow create, update: if isOwner(uid) && profil().role == 'partenaire'
-          && request.resource.data.keys().hasOnly(['vient', 'nbPersonnes', 'updatedAt'])
-          && request.resource.data.vient is bool
-          && request.resource.data.nbPersonnes is int
-          && request.resource.data.nbPersonnes >= 0
-          && request.resource.data.nbPersonnes <= 10
-          && get(/databases/$(database)/documents/events/$(eventId)).data.statut != 'annule';
+        allow create: if (peutRepondre() && reponseValide()
+          && request.resource.data.keys().hasOnly(['vient', 'nbPersonnes', 'updatedAt']))
+          || (peutEmarger()
+            && get(/databases/$(database)/documents/users/$(uid)).data.role == 'partenaire'
+            && request.resource.data.keys().hasOnly(['presence']));
+        allow update: if (peutRepondre() && reponseValide()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vient', 'nbPersonnes', 'updatedAt']))
+          || (peutEmarger() && !('note' in resource.data)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['presence']))
+          || (peutNoter()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['note', 'commentaire']));
         allow delete: if isAdmin();              // suppression d'un partenaire (F5), purge à 12 mois (RGPD)
       }
     }

@@ -10,6 +10,8 @@ import '../../features/events/ui/event_detail_page.dart';
 import '../../features/auth/ui/accueil_page.dart';
 import '../../features/auth/ui/connexion_page.dart';
 import '../../features/auth/ui/profil_page.dart';
+import '../../features/events/logic/events_cubit.dart';
+import '../../features/events/logic/events_state.dart';
 import '../../features/events/ui/evenements_page.dart';
 import '../../features/partners/ui/annuaire_page.dart';
 
@@ -26,11 +28,21 @@ class OngletsPage extends StatefulWidget {
   State<OngletsPage> createState() => _OngletsPageState();
 }
 
-class _OngletsPageState extends State<OngletsPage> {
+class _OngletsPageState extends State<OngletsPage> with SingleTickerProviderStateMixin {
   int _index = 0;
   StreamSubscription<String>? _ouvertures;
+  late final _transition = AnimationController(vsync: this, duration: const Duration(milliseconds: 200), value: 1);
+  late final _fondu = _transition.drive(CurveTween(curve: Curves.easeOut));
 
-  void _aller(int i) => setState(() => _index = i);
+  void _aller(int i) {
+    if (i == _index) return;
+    setState(() => _index = i);
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _transition.value = 1;
+    } else {
+      _transition.forward(from: 0.28);
+    }
+  }
 
   @override
   void initState() {
@@ -47,12 +59,20 @@ class _OngletsPageState extends State<OngletsPage> {
   @override
   void dispose() {
     _ouvertures?.cancel();
+    _transition.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final session = widget.session;
+    final avisEnAttente =
+        session != null &&
+        !session.estAdmin &&
+        context.select((EventsCubit cubit) {
+          final state = cubit.state;
+          return state is EventsSuccess && state.aNoter(DateTime.now()).isNotEmpty;
+        });
     final List<(Widget, NavigationDestination)> onglets = session == null
         ? [
             (
@@ -64,7 +84,13 @@ class _OngletsPageState extends State<OngletsPage> {
           ]
         : [
             (const AnnuairePage(), const NavigationDestination(icon: Icon(Icons.grid_view), label: 'Annuaire')),
-            (const EvenementsPage(), const NavigationDestination(icon: Icon(Icons.event), label: 'Événements')),
+            (
+              EvenementsPage(actif: _index == 1, bureau: session.estAdmin),
+              NavigationDestination(
+                icon: Badge(isLabelVisible: avisEnAttente, child: const Icon(Icons.event)),
+                label: 'Événements',
+              ),
+            ),
             (
               ProfilPage(session: session),
               const NavigationDestination(icon: Icon(Icons.person_outline), label: 'Mon profil'),
@@ -78,7 +104,13 @@ class _OngletsPageState extends State<OngletsPage> {
 
     return Scaffold(
       // IndexedStack garde chaque onglet vivant : on retrouve sa recherche ou sa position en revenant.
-      body: IndexedStack(index: _index, children: [for (final (page, _) in onglets) page]),
+      body: FadeTransition(
+        opacity: _fondu,
+        child: IndexedStack(
+          index: _index,
+          children: [for (var i = 0; i < onglets.length; i++) TickerMode(enabled: i == _index, child: onglets[i].$1)],
+        ),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: _aller,

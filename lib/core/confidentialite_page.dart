@@ -15,9 +15,10 @@ class ConfidentialitePage extends StatelessWidget {
     (
       'Données collectées',
       'Pour les partenaires : nom et e-mail du compte, informations professionnelles de la fiche, logo de '
-          "l'entreprise, téléphone personnel facultatif, réponses aux événements, identifiant de notification. "
+          "l'entreprise, téléphone personnel facultatif, réponses, émargements et avis aux événements, identifiant de notification. "
           "Pour les visiteurs : aucune donnée. L'application n'a ni publicité, ni traceur, ni statistiques, "
-          "et n'utilise pas la localisation.",
+          "et n'accède pas à la position de votre appareil. L'adresse de l'événement est envoyée à l'IGN "
+          'pour vérifier son emplacement et afficher une carte.',
     ),
     (
       'Pourquoi',
@@ -27,13 +28,13 @@ class ConfidentialitePage extends StatelessWidget {
     (
       'Qui voit quoi',
       "La fiche (nom, activité, description, adresse, contacts professionnels, logo) est publique : elle apparaît "
-          "dans l'annuaire, consultable sans compte. Le téléphone personnel et vos réponses aux événements ne sont "
-          'visibles que par vous et le bureau du club.',
+          "dans l'annuaire, consultable sans compte. Votre téléphone personnel, vos réponses, votre présence et vos "
+          'avis aux événements sont visibles par vous et le bureau du club.',
     ),
     (
       'Durée de conservation',
-      'Tant que le partenariat est actif. À la fin, tout est effacé de l\'application. Les réponses aux '
-          'événements sont effacées 12 mois après l\'événement.',
+      'Tant que le partenariat est actif. À la fin, tout est effacé de l\'application. Les réponses, '
+          'émargements et avis sont effacés 12 mois après l\'événement.',
     ),
     (
       'Vos droits',

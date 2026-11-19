@@ -17,10 +17,9 @@ class EventRepository {
 
   String get _uid => _auth.currentUser?.uid ?? (throw StateError('Aucun compte connecté'));
 
-  /// Événements à venir (F11), en temps réel : une modification du bureau s'affiche dès que le réseau revient.
+  /// Agenda et historique, en temps réel.
   Stream<EvenementsSnapshot> ecouterEvenements() => _firestore
       .collection('events')
-      .where('date', isGreaterThanOrEqualTo: Timestamp.now())
       .orderBy('date')
       .snapshots(includeMetadataChanges: true)
       .map(
@@ -39,8 +38,22 @@ class EventRepository {
 
   /// Hors ligne, Firestore écrit d'abord dans le cache (affiché tout de suite, `enAttente`),
   /// puis envoie au retour du réseau. Le Future ne se termine qu'à la confirmation du serveur.
-  Future<void> repondre(String eventId, {required bool vient, required int nbPersonnes}) =>
-      _reponse(eventId).set({'vient': vient, 'nbPersonnes': nbPersonnes, 'updatedAt': FieldValue.serverTimestamp()});
+  Future<void> repondre(String eventId, {required bool vient, required int nbPersonnes}) => _reponse(eventId).set({
+    'vient': vient,
+    'nbPersonnes': nbPersonnes,
+    'updatedAt': FieldValue.serverTimestamp(),
+  }, SetOptions(merge: true));
+
+  Future<void> noter(String eventId, AvisEvenement avis) {
+    final ref = _reponse(eventId);
+    return _firestore.runTransaction<void>((transaction) async {
+      final reponse = (await transaction.get(ref)).data();
+      if (reponse?['presence'] != true || reponse!.containsKey('note')) {
+        throw StateError("L'avis n'est plus disponible.");
+      }
+      transaction.update(ref, {'note': avis.note, 'commentaire': avis.commentaire});
+    });
+  }
 
   /// F10, bureau uniquement (règle `isAdmin`). Un identifiant vide crée l'événement.
   /// L'événement et son entrée de journal (F18) partent dans le même lot.

@@ -4,6 +4,7 @@ import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../../../core/confidentialite_page.dart';
 import '../../../core/widgets/bandeau_hors_ligne.dart';
+import '../../../core/widgets/etat_contenu.dart';
 import '../data/partner.dart';
 import '../logic/partners_cubit.dart';
 import '../logic/partners_state.dart';
@@ -20,12 +21,29 @@ class AnnuairePage extends StatelessWidget {
       appBar: AppBar(title: const TitreParquet()),
       body: BlocBuilder<PartnersCubit, PartnersState>(
         builder: (context, state) => switch (state) {
-          PartnersLoading() => const _Squelette(),
+          PartnersLoading() => const SingleChildScrollView(
+            padding: EdgeInsets.all(20),
+            child: SqueletteListe(libelle: "Chargement de l'annuaire"),
+          ),
           PartnersError(:final message) => _Erreur(message),
           PartnersEmpty(:final horsLigne, :final derniereSynchro) => Column(
             children: [
               if (horsLigne) BandeauHorsLigne(derniereSynchro: derniereSynchro),
-              const Expanded(child: Center(child: Text("Aucun partenaire dans l'annuaire pour le moment."))),
+              const Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      EtatContenu(
+                        icone: Icons.storefront_outlined,
+                        titre: "Aucun partenaire dans l'annuaire",
+                        message: 'Les entreprises du réseau apparaîtront ici.',
+                      ),
+                      _LienConfidentialite(),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
           PartnersSuccess() => _Liste(state),
@@ -56,9 +74,10 @@ class _Liste extends StatelessWidget {
               if (i == 0) return _EnTete(state);
               if (i == (partenaires.isEmpty ? 2 : partenaires.length + 1)) return const _LienConfidentialite();
               if (partenaires.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.only(top: 24),
-                  child: Text('Aucun partenaire ne correspond à cette recherche.', textAlign: TextAlign.center),
+                return const EtatContenu(
+                  icone: Icons.search_off,
+                  titre: 'Aucun résultat',
+                  message: 'Essayez un autre nom, métier ou filtre.',
                 );
               }
               return _Ligne(partenaires[i - 1]);
@@ -141,30 +160,6 @@ class _Ligne extends StatelessWidget {
   }
 }
 
-/// Chargement : trois lignes squelettes statiques (charte, compatible mouvement réduit).
-class _Squelette extends StatelessWidget {
-  const _Squelette();
-
-  @override
-  Widget build(BuildContext context) {
-    final gris = Theme.of(context).colorScheme.outline;
-    return Semantics(
-      label: "Chargement de l'annuaire",
-      child: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          for (var i = 0; i < 3; i++)
-            Container(
-              height: 64,
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(color: gris, borderRadius: BorderRadius.circular(10)),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 class _Erreur extends StatelessWidget {
   const _Erreur(this.message);
 
@@ -173,15 +168,12 @@ class _Erreur extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: context.read<PartnersCubit>().charger, child: const Text('Réessayer')),
-          ],
+      child: SingleChildScrollView(
+        child: EtatContenu(
+          icone: Icons.sync_problem,
+          titre: 'Annuaire indisponible',
+          message: message,
+          action: FilledButton(onPressed: context.read<PartnersCubit>().charger, child: const Text('Réessayer')),
         ),
       ),
     );

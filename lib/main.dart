@@ -22,19 +22,59 @@ import 'features/partners/logic/partners_cubit.dart';
 import 'features/partners/logic/profile_cubit.dart';
 import 'firebase_options.dart';
 
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // Projet Firebase « parquetclub » (forfait Spark), fichier généré par `flutterfire configure`.
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(
-    ParquetApp(
+  runApp(const _Demarrage());
+}
+
+class _Demarrage extends StatefulWidget {
+  const _Demarrage();
+
+  @override
+  State<_Demarrage> createState() => _DemarrageState();
+}
+
+class _DemarrageState extends State<_Demarrage> {
+  late Future<ParquetApp> _application;
+
+  @override
+  void initState() {
+    super.initState();
+    _application = _initialiser();
+  }
+
+  Future<ParquetApp> _initialiser() async {
+    // Compter le délai à partir de l'image visible, même si le moteur démarre lentement.
+    await Future.wait([
+      Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
+      WidgetsBinding.instance.waitUntilFirstFrameRasterized.then(
+        (_) => Future<void>.delayed(const Duration(milliseconds: 850)),
+      ),
+    ]);
+    return ParquetApp(
       authRepository: AuthRepository(),
       partnerRepository: PartnerRepository(),
       eventRepository: EventRepository(),
       adminRepository: AdminRepository(),
       notificationRepository: NotificationRepository(),
       verrouRepository: VerrouRepository(),
-    ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<ParquetApp>(
+    future: _application,
+    builder: (context, snapshot) =>
+        snapshot.data ??
+        MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light,
+          home: LancementPage(
+            reessayer: snapshot.connectionState == ConnectionState.done && snapshot.hasError
+                ? () => setState(() => _application = _initialiser())
+                : null,
+          ),
+        ),
   );
 }
 
@@ -88,7 +128,7 @@ class ParquetApp extends StatelessWidget {
                 _ => child!,
               },
               home: switch (auth) {
-                AuthInconnu() => const LancementPage(),
+                AuthInconnu() => const LancementPage(animerLogo: false),
                 AuthVisiteur() => const OngletsPage(),
                 AuthConnecte(:final session) => OngletsPage(session: session),
               },
@@ -97,9 +137,11 @@ class ParquetApp extends StatelessWidget {
             // donc jamais les données d'un autre compte. Au-dessus du Navigator pour les listes et les détails.
             return switch (auth) {
               AuthConnecte(:final session) => MultiBlocProvider(
-                key: ValueKey(session.uid),
+                key: ValueKey((session.uid, session.estAdmin)),
                 providers: [
-                  BlocProvider(create: (_) => EventsCubit(eventRepository, notificationRepository)..charger()),
+                  BlocProvider(
+                    create: (_) => EventsCubit(eventRepository, notificationRepository, session.estAdmin)..charger(),
+                  ),
                   if (session.estAdmin) ...[
                     BlocProvider(create: (_) => AdminCubit(adminRepository)..charger()),
                     BlocProvider(create: (_) => VerrouCubit(verrouRepository)..demarrer(), lazy: false),

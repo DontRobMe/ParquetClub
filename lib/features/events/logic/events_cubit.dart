@@ -9,16 +9,17 @@ import 'events_state.dart';
 
 /// ViewModel des événements : partagé par la liste et le détail (état partagé, cours 4).
 class EventsCubit extends Cubit<EventsState> {
-  EventsCubit(this._repository, [this._notifications]) : super(const EventsLoading());
+  EventsCubit(this._repository, [this._notifications, this._bureau = false]) : super(const EventsLoading());
 
   final EventRepository _repository;
   final NotificationRepository? _notifications;
+  final bool _bureau;
 
   /// Rappels déjà programmés : identifiant de l'événement → ce qui a servi à les écrire.
   final _rappels = <String, String>{};
   bool _rappelsRemisAZero = false;
   StreamSubscription<EvenementsSnapshot>? _abonnement;
-  // ponytail: une écoute par événement à venir ; un club en a une poignée. Requête collectionGroup si ça grossit.
+  Timer? _horloge;
   final _abonnementsReponses = <String, StreamSubscription<EventResponse?>>{};
 
   List<Event> _evenements = const [];
@@ -27,18 +28,26 @@ class EventsCubit extends Cubit<EventsState> {
   bool _horsLigne = false;
   DateTime? _derniereSynchro;
 
-  /// Démarre (ou relance après une erreur) l'écoute des événements à venir.
+  /// Démarre (ou relance après une erreur) l'écoute de l'agenda et de l'historique.
   void charger() {
     emit(const EventsLoading());
     _toutArreter();
-    _abonnement = _repository.ecouterEvenements().listen((snap) {
-      _evenements = snap.evenements;
-      _horsLigne = snap.horsLigne;
-      if (!snap.horsLigne) _derniereSynchro = DateTime.now();
-      _recu = true;
-      _suivreReponses();
-      _emettre();
-    }, onError: (Object _) => emit(const EventsError('Impossible de charger les événements.')));
+    _abonnement = _repository.ecouterEvenements().listen(
+      (snap) {
+        _evenements = snap.evenements;
+        _horsLigne = snap.horsLigne;
+        if (!snap.horsLigne) _derniereSynchro = DateTime.now();
+        _recu = true;
+        _suivreReponses();
+        _emettre();
+        _programmerActualisation();
+      },
+      onError: (Object _) {
+        _recu = false;
+        _horloge?.cancel();
+        emit(const EventsError('Impossible de charger les événements.'));
+      },
+    );
   }
 
   Event? evenement(String id) {
@@ -52,6 +61,14 @@ class EventsCubit extends Cubit<EventsState> {
   /// La réponse apparaît tout de suite via `ecouterReponse`, avec `enAttente` à vrai.
   Future<void> repondre(String eventId, {required bool vient, int nbPersonnes = 1}) =>
       _repository.repondre(eventId, vient: vient, nbPersonnes: vient ? nbPersonnes : 0);
+
+  Future<void> noter(String eventId, AvisEvenement avis) async {
+    final event = evenement(eventId);
+    if (event == null || _reponses[eventId]?.peutNoter(event, DateTime.now()) != true) {
+      throw StateError("L'avis n'est plus disponible.");
+    }
+    await _repository.noter(eventId, avis);
+  }
 
   /// Vrai si l'écran doit expliquer le rappel avant de demander l'autorisation des notifications.
   Future<bool> rappelsADemander() async {
@@ -77,6 +94,7 @@ class EventsCubit extends Cubit<EventsState> {
         lieu: event.lieu,
         description: event.description,
         statut: change ? EventStatut.modifie : (ancien?.statut ?? EventStatut.prevu),
+        photo: event.photo,
       ),
     );
   }
@@ -87,7 +105,12 @@ class EventsCubit extends Cubit<EventsState> {
   }
 
   void _suivreReponses() {
-    final ids = {for (final e in _evenements) e.id};
+    if (_bureau) return;
+    final maintenant = DateTime.now();
+    final ids = {
+      for (final e in _evenements)
+        if (e.suiviDisponible(maintenant)) e.id,
+    };
     for (final id in _abonnementsReponses.keys.toList()) {
       if (!ids.contains(id)) {
         _abonnementsReponses.remove(id)!.cancel();
@@ -110,12 +133,31 @@ class EventsCubit extends Cubit<EventsState> {
     }
   }
 
+  void _programmerActualisation() {
+    _horloge?.cancel();
+    final maintenant = DateTime.now();
+    DateTime? prochain;
+    for (final e in _evenements) {
+      for (final date in [if (_bureau) e.jour, e.date, e.date.add(dureeSuiviEvenement)]) {
+        if (date.isAfter(maintenant) && (prochain == null || date.isBefore(prochain))) prochain = date;
+      }
+    }
+    if (prochain != null) {
+      _horloge = Timer(prochain.difference(maintenant), () {
+        _suivreReponses();
+        _emettre();
+        _programmerActualisation();
+      });
+    }
+  }
+
   /// F16. Recalculé à chaque changement : « Je viens » programme le rappel, « Je ne viens pas »,
   /// une annulation ou un événement passé le retirent ; un changement de date le reprogramme.
   // ponytail: un événement annulé pendant que l'app est fermée garde son rappel jusqu'à la prochaine ouverture.
   void _mettreAJourRappels() {
     final notifications = _notifications;
     if (notifications == null) return;
+    final maintenant = DateTime.now();
     if (!_rappelsRemisAZero) {
       // Au démarrage, on repart de zéro : rien d'un ancien état ou d'un autre compte ne survit.
       _rappelsRemisAZero = true;
@@ -123,7 +165,7 @@ class EventsCubit extends Cubit<EventsState> {
     }
     final voulus = {
       for (final e in _evenements)
-        if (!e.annule && (_reponses[e.id]?.vient ?? false)) e.id: e,
+        if (!e.annule && !e.estPasse(maintenant) && (_reponses[e.id]?.vient ?? false)) e.id: e,
     };
     for (final id in _rappels.keys.toList()) {
       if (!voulus.containsKey(id)) {
@@ -158,6 +200,8 @@ class EventsCubit extends Cubit<EventsState> {
   }
 
   void _toutArreter() {
+    _recu = false;
+    _horloge?.cancel();
     _abonnement?.cancel();
     for (final a in _abonnementsReponses.values) {
       a.cancel();

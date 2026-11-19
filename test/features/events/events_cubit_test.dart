@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parquet/features/events/data/event.dart';
 import 'package:parquet/features/events/logic/events_cubit.dart';
@@ -93,6 +95,28 @@ void main() {
     );
     await cubit.enregistrer(nouveau, ancien: soiree);
     expect(repository.enregistres.single.statut, EventStatut.prevu);
+  });
+
+  test("conserve la couverture en Firestore et lit les événements sans photo", () async {
+    final photo = Uint8List.fromList([1, 2, 3]);
+    final event = Event(id: soiree.id, titre: soiree.titre, date: soiree.date, photo: photo);
+    await cubit.enregistrer(event);
+    final donnees = repository.enregistres.single.toMap();
+    expect(Event.fromMap(event.id, donnees).photo, photo);
+    donnees.remove('photo');
+    expect(Event.fromMap(event.id, donnees).photo, isNull);
+  });
+
+  test("l'émargement ouvre le jour même et seul un présent peut noter après l'heure", () {
+    final evenement = Event(id: 'test', titre: 'Match', date: DateTime(2026, 11, 19, 19));
+    const present = EventResponse(vient: false, nbPersonnes: 0, presence: true);
+    const absent = EventResponse(vient: true, nbPersonnes: 2, presence: false);
+    final avant = DateTime(2026, 11, 19, 8);
+    expect(evenement.emargementOuvert(DateTime(2026, 11, 18, 23, 59)), isFalse);
+    expect(evenement.emargementOuvert(avant), isTrue);
+    expect(present.peutNoter(evenement, avant), isFalse);
+    expect(present.peutNoter(evenement, evenement.date), isTrue);
+    expect(absent.peutNoter(evenement, evenement.date), isFalse);
   });
 
   group('rappel 2 jours avant (F16)', () {

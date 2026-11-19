@@ -9,6 +9,8 @@ class FakeEventRepository implements EventRepository {
   final evenements = StreamController<EvenementsSnapshot>.broadcast();
   final _reponses = <String, StreamController<EventResponse?>>{};
   final appels = <({String eventId, bool vient, int nbPersonnes})>[];
+  final avis = <AvisEvenement>[];
+  final _dernieresReponses = <String, EventResponse>{};
   var _serveur = Completer<void>();
 
   @override
@@ -17,6 +19,21 @@ class FakeEventRepository implements EventRepository {
   @override
   Stream<EventResponse?> ecouterReponse(String eventId) =>
       (_reponses[eventId] ??= StreamController<EventResponse?>.broadcast()).stream;
+
+  void envoyerReponse(String eventId, EventResponse reponse) {
+    _dernieresReponses[eventId] = reponse;
+    _reponses[eventId]?.add(reponse);
+  }
+
+  @override
+  Future<void> noter(String eventId, AvisEvenement avis) async {
+    this.avis.add(avis);
+    final reponse = _dernieresReponses[eventId]!;
+    envoyerReponse(
+      eventId,
+      EventResponse(vient: reponse.vient, nbPersonnes: reponse.nbPersonnes, presence: reponse.presence, avis: avis),
+    );
+  }
 
   @override
   Future<void> repondre(String eventId, {required bool vient, required int nbPersonnes}) {
@@ -45,12 +62,23 @@ class FakeEventRepository implements EventRepository {
   }
 }
 
+final _dateEssai = DateTime.now().add(const Duration(days: 14));
 final soiree = Event(
   id: 'loge',
   titre: 'Soirée en loge',
   type: 'Match en loge',
-  date: DateTime(2026, 12, 4, 19, 30),
+  date: DateTime(_dateEssai.year, _dateEssai.month, _dateEssai.day, 19, 30),
   lieu: 'Palais des Sports · Limoges',
 );
-final afterwork = Event(id: 'aw', titre: 'Afterwork du club', type: 'Afterwork', date: DateTime(2026, 12, 17, 18, 45));
-final voeux = Event(id: 'voeux', titre: 'Vœux au parquet', date: DateTime(2027, 1, 14, 19), statut: EventStatut.annule);
+final afterwork = Event(
+  id: 'aw',
+  titre: 'Afterwork du club',
+  type: 'Afterwork',
+  date: _dateEssai.add(const Duration(days: 14)),
+);
+final voeux = Event(
+  id: 'voeux',
+  titre: 'Vœux au parquet',
+  date: _dateEssai.add(const Duration(days: 28)),
+  statut: EventStatut.annule,
+);

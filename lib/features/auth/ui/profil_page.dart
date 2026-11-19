@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../../../core/confidentialite_page.dart';
+import '../../../core/widgets/etat_contenu.dart';
 import '../../admin/logic/verrou_cubit.dart';
 import '../../partners/logic/profile_cubit.dart';
 import '../../partners/ui/fiche_form_page.dart';
@@ -81,7 +82,7 @@ class _MaFiche extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<ProfileCubit, ProfileState>(
       builder: (context, state) => switch (state) {
-        ProfileLoading() => const Center(child: CircularProgressIndicator(semanticsLabel: 'Chargement de votre fiche')),
+        ProfileLoading() => const SqueletteListe(libelle: 'Chargement de votre fiche', lignes: 1),
         ProfileError(:final message) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

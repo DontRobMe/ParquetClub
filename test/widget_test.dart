@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:parquet/features/admin/data/admin_repository.dart';
+import 'package:parquet/features/events/data/event.dart';
 import 'package:parquet/features/partners/data/partner.dart';
 import 'package:parquet/features/partners/ui/partner_logo.dart';
 import 'package:parquet/main.dart';
@@ -216,6 +217,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
 
     await tester.scrollUntilVisible(find.widgetWithText(OutlinedButton, "Annuler l'événement"), 200);
+    await tester.pump();
     await tester.tap(find.widgetWithText(OutlinedButton, "Annuler l'événement"));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
@@ -354,6 +356,113 @@ void main() {
     await tester.pump(const Duration(seconds: 1)); // fin de la transition d'écran
     expect(find.text('Je viens'), findsNothing);
     expect(find.text('Voir les réponses'), findsOneWidget);
+  });
+
+  testWidgets("bureau : le bouton de l'agenda ouvre directement les réponses", (tester) async {
+    await lancer(tester, connecte: true, estBureau: true);
+    admin.comptes.add(const []);
+    events.envoyer([soiree]);
+    await tester.tap(find.text('Événements'));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Répondre à l'invitation"), findsNothing);
+    final acces = find.text('Voir les réponses');
+    await tester.ensureVisible(acces);
+    await tester.pump();
+    await tester.tap(acces);
+    await tester.pump();
+    admin.reponses.add(const []);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Réponses reçues'), findsOneWidget);
+    expect(find.text('Aucune réponse pour le moment.'), findsOneWidget);
+    expect(find.text('Je viens'), findsNothing);
+  });
+
+  testWidgets("historique : propose l'avis d'un participant présent et retire la pastille après l'envoi", (
+    tester,
+  ) async {
+    final passe = Event(id: 'passe', titre: 'Match du club', date: DateTime.now().subtract(const Duration(days: 1)));
+    await lancer(tester, connecte: true);
+    events.envoyer([passe, soiree]);
+    await tester.pump();
+    events.envoyerReponse(passe.id, const EventResponse(vient: true, nbPersonnes: 2, presence: true));
+    await tester.pump();
+    expect(find.byWidgetPredicate((w) => w is Badge && w.isLabelVisible), findsOneWidget);
+
+    await tester.tap(find.text('Événements'));
+    await tester.pumpAndSettle();
+    expect(find.text('Comment était cet événement ?'), findsOneWidget);
+    await tester.tap(find.text('Plus tard'));
+    await tester.pumpAndSettle();
+    expect(find.text('À noter'), findsOneWidget);
+
+    await tester.tap(find.text(passe.titre));
+    await tester.pumpAndSettle();
+    expect(find.text('Je viens'), findsNothing);
+    await tester.tap(find.text('Noter cet événement'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('4 sur 5'));
+    await tester.enterText(find.byType(TextField), 'Très bonne ambiance');
+    await tester.tap(find.text('Envoyer mon avis'));
+    await tester.pumpAndSettle();
+    expect(events.avis.single.note, 4);
+    expect(events.avis.single.commentaire, 'Très bonne ambiance');
+    expect(find.text('Votre note · 4/5'), findsOneWidget);
+    expect(find.text('Noter cet événement'), findsNothing);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.byWidgetPredicate((w) => w is Badge && w.isLabelVisible), findsNothing);
+  });
+
+  testWidgets('bureau : émarge un partenaire sans RSVP et affiche les avis reçus', (tester) async {
+    ecranHaut(tester);
+    final passe = Event(id: 'passe', titre: 'Match du club', date: DateTime.now().subtract(const Duration(days: 1)));
+    await lancer(tester, connecte: true, estBureau: true);
+    partners.envoyer([cap, grain]);
+    events.envoyer([passe]);
+    admin.comptes.add(const [Compte(uid: 'c', email: 'cap@example.test', actif: true)]);
+    await tester.tap(find.text('Administration'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Gérer les événements'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(passe.titre));
+    await tester.pump();
+    admin.reponses.add(const []);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Émargement'));
+    await tester.pumpAndSettle();
+    expect(find.text('Invitation sans réponse'), findsOneWidget);
+    await tester.tap(find.text('Présent'));
+    await tester.pumpAndSettle();
+    expect(admin.appels, ['presence:passe:c:true']);
+    admin.reponses.add(const [ReponseBureau(uid: 'c', vient: false, nbPersonnes: 0, aRepondu: false, presence: true)]);
+    await tester.pumpAndSettle();
+    expect(find.text('1 présent sur 1'), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    admin.reponses.add(const [
+      ReponseBureau(
+        uid: 'c',
+        vient: false,
+        nbPersonnes: 0,
+        aRepondu: false,
+        presence: true,
+        avis: AvisEvenement(note: 5),
+      ),
+      ReponseBureau(
+        uid: 'g',
+        vient: true,
+        nbPersonnes: 1,
+        presence: true,
+        avis: AvisEvenement(note: 4, commentaire: 'Belle organisation'),
+      ),
+    ]);
+    await tester.pumpAndSettle();
+    expect(find.text('4,5 / 5'), findsOneWidget);
+    expect(find.text('Note moyenne · 2 avis'), findsOneWidget);
+    expect(find.text('Belle organisation'), findsOneWidget);
   });
 
   testWidgets("logo de remplacement : deux lettres, même pour un nom d'un seul mot", (tester) async {

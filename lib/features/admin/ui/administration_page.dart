@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:parquet/core/widgets/titre_parquet.dart';
 
+import '../../../core/widgets/etat_contenu.dart';
 import '../../partners/logic/partners_cubit.dart';
 import '../data/admin_repository.dart';
 import '../logic/admin_cubit.dart';
@@ -27,8 +28,10 @@ class AdministrationPage extends StatelessWidget {
           final entete = <Widget>[
             Semantics(header: true, child: Text('ADMINISTRATION', style: theme.textTheme.displaySmall)),
             const SizedBox(height: 16),
-            _Total(actifs: state is AdminSuccess ? state.actifs : 0),
-            const SizedBox(height: 12),
+            if (state is AdminSuccess || state is AdminEmpty) ...[
+              _Total(actifs: state is AdminSuccess ? state.actifs : 0),
+              const SizedBox(height: 12),
+            ],
             FilledButton.icon(
               icon: const Icon(Icons.person_add_alt),
               label: const Text('Inviter un partenaire'),
@@ -51,15 +54,19 @@ class AdministrationPage extends StatelessWidget {
             const SizedBox(height: 8),
           ];
           final List<Widget> contenu = switch (state) {
-            AdminLoading() => [
-              const Center(child: CircularProgressIndicator(semanticsLabel: 'Chargement des comptes')),
-            ],
+            AdminLoading() => [const SqueletteListe(libelle: 'Chargement des comptes')],
             AdminError(:final message) => [
               Text(message),
               const SizedBox(height: 8),
               OutlinedButton(onPressed: context.read<AdminCubit>().charger, child: const Text('Réessayer')),
             ],
-            AdminEmpty() => [const Text('Aucun partenaire pour le moment. Invitez le premier.')],
+            AdminEmpty() => [
+              const EtatContenu(
+                icone: Icons.group_add_outlined,
+                titre: 'Aucun partenaire pour le moment',
+                message: 'Invitez un partenaire pour lui ouvrir un accès au club.',
+              ),
+            ],
             AdminSuccess(:final comptes) => [
               for (final c in comptes) _Ligne(c, onTap: () => ouvrir(ComptePage(uid: c.uid))),
             ],

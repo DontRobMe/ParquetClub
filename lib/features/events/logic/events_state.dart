@@ -34,4 +34,9 @@ class EventsSuccess extends EventsState {
   final Map<String, EventResponse> reponses;
   final bool horsLigne;
   final DateTime? derniereSynchro;
+
+  List<Event> aVenir(DateTime maintenant) => evenements.where((e) => !e.estPasse(maintenant)).toList();
+  List<Event> historique(DateTime maintenant) => evenements.reversed.where((e) => e.estPasse(maintenant)).toList();
+  List<Event> aNoter(DateTime maintenant) =>
+      evenements.reversed.where((e) => reponses[e.id]?.peutNoter(e, maintenant) ?? false).toList();
 }

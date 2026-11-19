@@ -5,7 +5,7 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>Déverrouiller l'espace bureau de Parquet.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Choisir le logo de votre entreprise pour votre fiche.</string>
+	<string>Choisir le logo de votre entreprise ou une photo pour un événement du club.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

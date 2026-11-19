@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Seule permission demandée à l'utilisateur (Android 13+), au bon moment et expliquée (OWASP M6) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- Reprogrammer le rappel J-2 après un redémarrage du téléphone (pas de demande à l'utilisateur) -->

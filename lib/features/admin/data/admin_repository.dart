@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 
+import '../../events/data/event.dart';
+
 /// Compte vu par le bureau : `users/{uid}`.
 class Compte {
   const Compte({required this.uid, required this.email, required this.actif});
@@ -15,11 +17,33 @@ class Compte {
 
 /// Réponse d'un partenaire, vue par le bureau (F13).
 class ReponseBureau {
-  const ReponseBureau({required this.uid, required this.vient, required this.nbPersonnes});
+  const ReponseBureau({
+    required this.uid,
+    required this.vient,
+    required this.nbPersonnes,
+    this.aRepondu = true,
+    this.presence,
+    this.avis,
+  });
+
+  factory ReponseBureau.fromMap(String uid, Map<String, dynamic> data) {
+    final reponse = EventResponse.fromMap(data);
+    return ReponseBureau(
+      uid: uid,
+      vient: reponse.vient,
+      nbPersonnes: reponse.nbPersonnes,
+      aRepondu: reponse.aRepondu,
+      presence: reponse.presence,
+      avis: reponse.avis,
+    );
+  }
 
   final String uid;
   final bool vient;
   final int nbPersonnes;
+  final bool aRepondu;
+  final bool? presence;
+  final AvisEvenement? avis;
 }
 
 /// Ligne du journal des actions du bureau (F18).
@@ -142,7 +166,7 @@ class AdminRepository {
 
   /// RGPD : les réponses sont effacées 12 mois après l'événement. Lancé à l'ouverture de l'espace bureau.
   Future<void> purgerReponsesAnciennes() async {
-    final limite = DateTime.now().subtract(const Duration(days: 365));
+    final limite = DateTime.now().subtract(dureeSuiviEvenement);
     final anciens = await _firestore.collection('events').where('date', isLessThan: Timestamp.fromDate(limite)).get();
     for (final e in anciens.docs) {
       final reponses = await e.reference.collection('responses').get();
@@ -194,16 +218,22 @@ class AdminRepository {
       .doc(eventId)
       .collection('responses')
       .snapshots()
-      .map(
-        (snap) => [
-          for (final doc in snap.docs)
-            ReponseBureau(
-              uid: doc.id,
-              vient: doc.data()['vient'] == true,
-              nbPersonnes: doc.data()['nbPersonnes'] is int ? doc.data()['nbPersonnes'] as int : 0,
-            ),
-        ],
-      );
+      .map((snap) => [for (final doc in snap.docs) ReponseBureau.fromMap(doc.id, doc.data())]);
+
+  Future<void> emarger(String eventId, String uid, bool present) async {
+    final ref = _firestore.collection('events').doc(eventId).collection('responses').doc(uid);
+    try {
+      await _firestore.runTransaction<void>((transaction) async {
+        final reponse = (await transaction.get(ref)).data();
+        if (reponse?.containsKey('note') == true) {
+          throw const AdminErreur('La présence est déjà liée à un avis.');
+        }
+        transaction.set(ref, {'presence': present}, SetOptions(merge: true));
+      });
+    } on FirebaseException {
+      throw const AdminErreur("La présence n'a pas pu être enregistrée. Réessayez.");
+    }
+  }
 
   /// Ajoute l'entrée du journal dans le même lot que l'action : les deux réussissent ou échouent ensemble.
   void _journal(WriteBatch lot, String action, String cible) => ajouterAuJournal(_firestore, _auth, lot, action, cible);

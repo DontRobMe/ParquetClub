@@ -16,6 +16,9 @@ class FakeAdminRepository implements AdminRepository {
   @override
   Stream<List<ReponseBureau>> ecouterReponses(String eventId) => reponses.stream;
 
+  @override
+  Future<void> emarger(String eventId, String uid, bool present) => _action('presence:$eventId:$uid:$present');
+
   Future<void> _action(String nom) async {
     final message = refus;
     if (message != null) throw AdminErreur(message);

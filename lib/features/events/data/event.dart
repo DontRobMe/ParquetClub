@@ -1,7 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Statut d'un événement ; le `switch` sur cet enum doit couvrir tous les cas (cours 2).
 enum EventStatut { prevu, modifie, annule }
+
+const tailleMaxPhotoEvenement = 450000;
+const dureeSuiviEvenement = Duration(days: 365);
 
 /// Événement du club : `events/{id}`. Écrit par le bureau, lu par les comptes connectés.
 class Event {
@@ -13,6 +18,7 @@ class Event {
     this.lieu = '',
     this.description = '',
     this.statut = EventStatut.prevu,
+    this.photo,
   });
 
   final String id;
@@ -22,8 +28,18 @@ class Event {
   final String lieu;
   final String description;
   final EventStatut statut;
+  final Uint8List? photo;
 
   bool get annule => statut == EventStatut.annule;
+  bool estPasse(DateTime maintenant) => !date.isAfter(maintenant);
+
+  DateTime get jour {
+    final locale = date.toLocal();
+    return DateTime(locale.year, locale.month, locale.day);
+  }
+
+  bool suiviDisponible(DateTime maintenant) => maintenant.isBefore(date.add(dureeSuiviEvenement));
+  bool emargementOuvert(DateTime maintenant) => !annule && !maintenant.isBefore(jour) && suiviDisponible(maintenant);
 
   Map<String, Object> toMap() => {
     'titre': titre,
@@ -32,6 +48,7 @@ class Event {
     'lieu': lieu,
     'description': description,
     'statut': statut.name,
+    if (photo != null) 'photo': Blob(photo!),
   };
 
   factory Event.fromMap(String id, Map<String, dynamic> data) {
@@ -45,23 +62,62 @@ class Event {
       lieu: texte('lieu'),
       description: texte('description'),
       statut: EventStatut.values.firstWhere((s) => s.name == data['statut'], orElse: () => EventStatut.prevu),
+      photo: data['photo'] is Blob ? (data['photo'] as Blob).bytes : null,
     );
   }
 }
 
 /// Réponse du partenaire connecté : `events/{id}/responses/{uid}`.
 class EventResponse {
-  const EventResponse({required this.vient, required this.nbPersonnes, this.enAttente = false});
+  const EventResponse({
+    required this.vient,
+    required this.nbPersonnes,
+    this.enAttente = false,
+    this.aRepondu = true,
+    this.presence,
+    this.avis,
+  });
 
   final bool vient;
   final int nbPersonnes;
+  final bool aRepondu;
+  final bool? presence;
+  final AvisEvenement? avis;
 
   /// Vrai tant que la réponse n'est que dans le cache local (réponse faite sans réseau).
   final bool enAttente;
+
+  bool peutNoter(Event event, DateTime maintenant) =>
+      presence == true &&
+      avis == null &&
+      !event.annule &&
+      event.estPasse(maintenant) &&
+      event.suiviDisponible(maintenant);
 
   factory EventResponse.fromMap(Map<String, dynamic> data, {bool enAttente = false}) => EventResponse(
     vient: data['vient'] == true,
     nbPersonnes: data['nbPersonnes'] is int ? data['nbPersonnes'] as int : 0,
     enAttente: enAttente,
+    aRepondu: data['vient'] is bool,
+    presence: data['presence'] is bool ? data['presence'] as bool : null,
+    avis: AvisEvenement.depuisReponse(data),
   );
+}
+
+class AvisEvenement {
+  const AvisEvenement({required this.note, this.commentaire = ''});
+
+  final int note;
+  final String commentaire;
+
+  static AvisEvenement? depuisReponse(Map<String, dynamic> data) {
+    final note = data['note'];
+    return switch (note) {
+      int n when n >= 1 && n <= 5 => AvisEvenement(
+        note: n,
+        commentaire: data['commentaire'] is String ? data['commentaire'] as String : '',
+      ),
+      _ => null,
+    };
+  }
 }

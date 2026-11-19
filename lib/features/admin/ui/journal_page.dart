@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../../../core/format_date.dart';
+import '../../../core/widgets/etat_contenu.dart';
 import '../data/admin_repository.dart';
 import '../logic/admin_cubit.dart';
 import '../logic/admin_state.dart';
@@ -21,13 +22,19 @@ class JournalPage extends StatelessWidget {
         body: BlocBuilder<JournalCubit, JournalState>(
           builder: (context, state) {
             final List<Widget> contenu = switch (state) {
-              JournalLoading() => [const Center(child: CircularProgressIndicator(semanticsLabel: 'Chargement'))],
+              JournalLoading() => [const SqueletteListe(libelle: 'Chargement du journal')],
               JournalError(:final message) => [
                 Text(message),
                 const SizedBox(height: 8),
                 OutlinedButton(onPressed: context.read<JournalCubit>().charger, child: const Text('Réessayer')),
               ],
-              JournalEmpty() => [const Text('Aucune action enregistrée pour le moment.')],
+              JournalEmpty() => [
+                const EtatContenu(
+                  icone: Icons.history,
+                  titre: 'Aucune action enregistrée',
+                  message: 'Les actions du bureau apparaîtront ici.',
+                ),
+              ],
               JournalSuccess(:final entrees) => [for (final e in entrees) _Ligne(e)],
             };
             return ListView(

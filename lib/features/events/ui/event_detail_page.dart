@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:parquet/core/widgets/titre_parquet.dart';
 
-import '../../../core/format_date.dart';
+import '../../../core/widgets/etat_contenu.dart';
 import '../../admin/ui/evenement_bureau_page.dart';
 import '../../auth/logic/auth_cubit.dart';
 import '../../auth/logic/auth_state.dart';
 import '../data/event.dart';
 import '../logic/events_cubit.dart';
 import '../logic/events_state.dart';
-import 'etiquette_type.dart';
+import 'avis_evenement_sheet.dart';
 import 'evenements_page.dart';
+import 'lieu_evenement.dart';
+import 'visuel_evenement.dart';
 
 const _maxPersonnes = 10; // même borne que les règles Firestore
 
@@ -70,32 +72,47 @@ class _EventDetailPageState extends State<EventDetailPage> {
           if (event == null) {
             return Scaffold(
               appBar: AppBar(title: const TitreParquet()),
-              body: const Center(child: Text("Cet événement n'est plus à venir.")),
+              body: DetailEvenementIndisponible(state: state),
             );
           }
           final reponse = _reponse(state);
           // F12 est réservée aux partenaires : le bureau suit les réponses, il ne répond pas.
           final auth = context.read<AuthCubit>().state;
           final bureau = auth is AuthConnecte && auth.session.estAdmin;
+          final maintenant = DateTime.now();
+          final passe = event.estPasse(maintenant);
+          final peutNoter = !bureau && (reponse?.peutNoter(event, maintenant) ?? false);
           final nb = _nbPersonnes ?? ((reponse?.vient ?? false) ? reponse!.nbPersonnes : 1);
           return Scaffold(
             appBar: AppBar(title: const TitreParquet()),
-            body: _Infos(event: event, reponse: reponse),
+            body: _Infos(event: event, reponse: bureau ? null : reponse, passe: passe),
             // Action principale en bas, pleine largeur, dans la zone du pouce (cours 5).
-            bottomNavigationBar: event.annule
-                ? null
-                : bureau
+            bottomNavigationBar: bureau
                 ? SafeArea(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                      child: FilledButton(
+                      child: FilledButton.icon(
                         onPressed: () =>
                             Navigator.of(context)
                                 .push(MaterialPageRoute<void>(builder: (_) => EvenementBureauPage(eventId: event.id))),
-                        child: const Text('Voir les réponses'),
+                        icon: const Icon(Icons.groups_outlined),
+                        label: const Text('Voir les réponses'),
                       ),
                     ),
                   )
+                : peutNoter
+                ? SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                      child: FilledButton.icon(
+                        onPressed: () => ouvrirAvisEvenement(context, event),
+                        icon: const Icon(Icons.star_outline_rounded),
+                        label: const Text('Noter cet événement'),
+                      ),
+                    ),
+                  )
+                : event.annule || passe
+                ? null
                 : SafeArea(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
@@ -119,55 +136,109 @@ class _EventDetailPageState extends State<EventDetailPage> {
   }
 }
 
+class DetailEvenementIndisponible extends StatelessWidget {
+  const DetailEvenementIndisponible({super.key, required this.state});
+
+  final EventsState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        child: switch (state) {
+          EventsLoading() => const Padding(
+            padding: EdgeInsets.all(20),
+            child: SqueletteListe(libelle: "Chargement de l'événement", avecVisuel: true, lignes: 2),
+          ),
+          EventsError(:final message) => EtatContenu(
+            icone: Icons.sync_problem,
+            titre: 'Événement indisponible',
+            message: message,
+            action: FilledButton(onPressed: context.read<EventsCubit>().charger, child: const Text('Réessayer')),
+          ),
+          _ => const EtatContenu(
+            icone: Icons.event_busy_outlined,
+            titre: "Cet événement n'est plus à venir.",
+            message: "Retrouvez les prochains rendez-vous dans l'agenda.",
+          ),
+        },
+      ),
+    );
+  }
+}
+
 class _Infos extends StatelessWidget {
-  const _Infos({required this.event, required this.reponse});
+  const _Infos({required this.event, required this.reponse, required this.passe});
 
   final Event event;
   final EventResponse? reponse;
+  final bool passe;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final secondaire = TextStyle(color: theme.colorScheme.onSurfaceVariant);
-    final statut = texteStatut(event, reponse);
+    final statut = texteStatut(event, reponse, passe: passe);
+    final lieu = event.lieu.trim();
+    final description = event.description.trim();
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+      padding: const EdgeInsets.only(bottom: 24),
       children: [
-        if (event.type.isNotEmpty) ...[EtiquetteType(event.type), const SizedBox(height: 6)],
-        Semantics(header: true, child: Text(event.titre.toUpperCase(), style: theme.textTheme.headlineLarge)),
-        const SizedBox(height: 8),
-        Text('${dateLongue(event.date)} · ${heure(event.date)}', style: secondaire),
-        if (event.lieu.isNotEmpty) Text(event.lieu, style: secondaire),
-        if (event.statut == EventStatut.modifie) ...[
-          const SizedBox(height: 8),
-          const Text('Date, heure ou lieu modifiés par le club.', style: TextStyle(fontWeight: FontWeight.w700)),
-        ],
-        if (event.description.isNotEmpty) ...[const SizedBox(height: 16), Text(event.description)],
-        if (statut != null) ...[
-          const SizedBox(height: 24),
-          Semantics(
-            liveRegion: true,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: theme.colorScheme.secondary, borderRadius: BorderRadius.circular(10)),
-              child: Row(
-                children: [
-                  Icon(
-                    reponse?.enAttente == true ? Icons.schedule : Icons.check_circle_outline,
-                    color: theme.colorScheme.onSecondary,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      event.annule ? 'Cet événement est annulé.' : statut,
-                      style: TextStyle(color: theme.colorScheme.onSecondary, fontWeight: FontWeight.w700),
+        VisuelEvenement(event: event),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (statut != null)
+                Semantics(
+                  liveRegion: true,
+                  child: AnimatedContainer(
+                    duration: MediaQuery.disableAnimationsOf(context)
+                        ? Duration.zero
+                        : const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: reponse?.enAttente == true
+                          ? theme.colorScheme.primaryContainer
+                          : theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: theme.colorScheme.outline),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          event.annule
+                              ? Icons.event_busy_outlined
+                              : reponse?.enAttente == true
+                              ? Icons.schedule
+                              : Icons.check_circle_outline,
+                          color: theme.colorScheme.onPrimaryContainer,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            event.annule ? 'Cet événement est annulé.' : statut,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
+                ),
+              if (event.statut == EventStatut.modifie)
+                const Text('Date, heure ou lieu modifiés par le club.', style: TextStyle(fontWeight: FontWeight.w700)),
+              if (description.isNotEmpty) ...[
+                if (statut != null || event.statut == EventStatut.modifie) const SizedBox(height: 16),
+                Text(description, style: theme.textTheme.bodyLarge),
+              ],
+              if (lieu.isNotEmpty) ...[
+                if (statut != null || event.statut == EventStatut.modifie || description.isNotEmpty)
+                  const SizedBox(height: 20),
+                LieuEvenement(lieu: lieu),
+              ],
+            ],
           ),
-        ],
+        ),
       ],
     );
   }

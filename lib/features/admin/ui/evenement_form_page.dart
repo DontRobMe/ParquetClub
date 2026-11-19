@@ -1,10 +1,14 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../../../core/format_date.dart';
 import '../../events/data/event.dart';
 import '../../events/logic/events_cubit.dart';
+import '../../events/ui/visuel_evenement.dart';
 
 /// Créer ou modifier un événement (F10). Le texte du push est généré par le serveur, pas saisi ici.
 class EvenementFormPage extends StatefulWidget {
@@ -22,7 +26,10 @@ class _EvenementFormPageState extends State<EvenementFormPage> {
   late final _lieu = TextEditingController(text: widget.existant?.lieu);
   late final _description = TextEditingController(text: widget.existant?.description);
   late DateTime? _date = widget.existant?.date;
+  late Uint8List? _photo = widget.existant?.photo;
+  bool _choixPhoto = false;
   String? _erreur;
+  String? _erreurPhoto;
 
   @override
   void dispose() {
@@ -37,7 +44,7 @@ class _EvenementFormPageState extends State<EvenementFormPage> {
     final jour = await showDatePicker(
       context: context,
       initialDate: _date ?? maintenant,
-      firstDate: maintenant,
+      firstDate: maintenant.subtract(dureeSuiviEvenement),
       lastDate: maintenant.add(const Duration(days: 730)),
     );
     if (jour == null || !mounted) return;
@@ -45,8 +52,38 @@ class _EvenementFormPageState extends State<EvenementFormPage> {
       context: context,
       initialTime: TimeOfDay.fromDateTime(_date ?? DateTime(0, 1, 1, 19)),
     );
-    if (h == null) return;
+    if (h == null || !mounted) return;
     setState(() => _date = DateTime(jour.year, jour.month, jour.day, h.hour, h.minute));
+  }
+
+  Future<void> _choisirPhoto() async {
+    setState(() {
+      _choixPhoto = true;
+      _erreurPhoto = null;
+    });
+    try {
+      final fichier = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1280,
+        maxHeight: 960,
+        imageQuality: 72,
+        requestFullMetadata: false,
+      );
+      if (fichier == null) return;
+      final photo = await fichier.readAsBytes();
+      if (!mounted) return;
+      setState(() {
+        if (photo.length > tailleMaxPhotoEvenement || photo.isEmpty) {
+          _erreurPhoto = 'Choisissez une photo de 450 Ko maximum après compression.';
+        } else {
+          _photo = photo;
+        }
+      });
+    } on Exception {
+      if (mounted) setState(() => _erreurPhoto = "Impossible d'ouvrir cette photo.");
+    } finally {
+      if (mounted) setState(() => _choixPhoto = false);
+    }
   }
 
   void _enregistrer() {
@@ -54,10 +91,6 @@ class _EvenementFormPageState extends State<EvenementFormPage> {
     final titre = _titre.text.trim();
     if (titre.isEmpty || date == null) {
       setState(() => _erreur = 'Le titre, la date et l\'heure sont obligatoires.');
-      return;
-    }
-    if (date.isBefore(DateTime.now())) {
-      setState(() => _erreur = 'La date doit être dans le futur.');
       return;
     }
     final messager = ScaffoldMessenger.of(context);
@@ -68,6 +101,7 @@ class _EvenementFormPageState extends State<EvenementFormPage> {
       date: date,
       lieu: _lieu.text.trim(),
       description: _description.text.trim(),
+      photo: _photo,
     );
     // Pas d'await : hors ligne, l'événement apparaît tout de suite et part au retour du réseau.
     context.read<EventsCubit>().enregistrer(event, ancien: widget.existant).catchError((Object _) {
@@ -82,6 +116,7 @@ class _EvenementFormPageState extends State<EvenementFormPage> {
     final theme = Theme.of(context);
     final date = _date;
     final creation = widget.existant == null;
+    final dateArchivee = widget.existant?.estPasse(DateTime.now()) ?? false;
     return Scaffold(
       appBar: AppBar(title: const TitreParquet()),
       body: ListView(
@@ -92,6 +127,38 @@ class _EvenementFormPageState extends State<EvenementFormPage> {
             child: Text(creation ? 'NOUVEL ÉVÉNEMENT' : 'MODIFIER', style: theme.textTheme.displaySmall),
           ),
           const SizedBox(height: 24),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              width: double.infinity,
+              height: 148,
+              child: PhotoEvenement(photo: _photo),
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _choixPhoto ? null : _choisirPhoto,
+            icon: const Icon(Icons.photo_library_outlined),
+            label: Text(
+              _choixPhoto
+                  ? 'Chargement de la photo…'
+                  : _photo == null
+                  ? 'Ajouter une photo'
+                  : 'Changer la photo',
+            ),
+          ),
+          if (_photo != null)
+            TextButton(
+              onPressed: _choixPhoto
+                  ? null
+                  : () => setState(() {
+                      _photo = null;
+                      _erreurPhoto = null;
+                    }),
+              child: const Text("Utiliser l’image par défaut"),
+            ),
+          if (_erreurPhoto != null) Text(_erreurPhoto!, style: TextStyle(color: theme.colorScheme.error)),
+          const SizedBox(height: 16),
           TextField(
             controller: _titre,
             maxLength: 80,
@@ -112,13 +179,17 @@ class _EvenementFormPageState extends State<EvenementFormPage> {
           OutlinedButton.icon(
             icon: const Icon(Icons.calendar_today),
             label: Text(date == null ? 'Choisir la date et l\'heure' : '${dateLongue(date)} · ${heure(date)}'),
-            onPressed: _choisirDate,
+            onPressed: dateArchivee ? null : _choisirDate,
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _lieu,
             maxLength: 120,
-            decoration: const InputDecoration(labelText: 'Lieu'),
+            decoration: const InputDecoration(
+              labelText: 'Lieu',
+              helperText: 'Indiquez une adresse postale complète pour afficher une carte.',
+              helperMaxLines: 2,
+            ),
           ),
           const SizedBox(height: 8),
           TextField(
@@ -143,7 +214,10 @@ class _EvenementFormPageState extends State<EvenementFormPage> {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-          child: FilledButton(onPressed: _enregistrer, child: Text(creation ? "Créer l'événement" : 'Enregistrer')),
+          child: FilledButton(
+            onPressed: _choixPhoto ? null : _enregistrer,
+            child: Text(creation ? "Créer l'événement" : 'Enregistrer'),
+          ),
         ),
       ),
     );
