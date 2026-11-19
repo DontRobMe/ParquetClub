@@ -88,11 +88,7 @@ class EventResponse {
   final bool enAttente;
 
   bool peutNoter(Event event, DateTime maintenant) =>
-      presence == true &&
-      avis == null &&
-      !event.annule &&
-      event.estPasse(maintenant) &&
-      event.suiviDisponible(maintenant);
+      presence == true && avis == null && event.emargementOuvert(maintenant);
 
   factory EventResponse.fromMap(Map<String, dynamic> data, {bool enAttente = false}) => EventResponse(
     vient: data['vient'] == true,
@@ -110,14 +106,28 @@ class AvisEvenement {
   final int note;
   final String commentaire;
 
-  static AvisEvenement? depuisReponse(Map<String, dynamic> data) {
-    final note = data['note'];
+  Map<String, Object> toMap() => {'note': note, 'commentaire': commentaire};
+
+  static AvisEvenement? depuisReponse(Map<String, dynamic>? data) {
+    final note = data?['note'];
+    final commentaire = data?['commentaire'];
     return switch (note) {
-      int n when n >= 1 && n <= 5 => AvisEvenement(
-        note: n,
-        commentaire: data['commentaire'] is String ? data['commentaire'] as String : '',
-      ),
+      int n when n >= 1 && n <= 5 => AvisEvenement(note: n, commentaire: commentaire is String ? commentaire : ''),
       _ => null,
     };
   }
+}
+
+class ErreurSuiviEvenement implements Exception {
+  const ErreurSuiviEvenement(this.message);
+
+  factory ErreurSuiviEvenement.depuisFirestore(String code) => ErreurSuiviEvenement(switch (code) {
+    'permission-denied' => "Le serveur refuse cet enregistrement. Le bureau peut vérifier les droits Firebase.",
+    'unauthenticated' => 'Reconnectez-vous pour enregistrer ce changement.',
+    'unavailable' || 'deadline-exceeded' => 'La connexion au serveur a échoué. Réessayez une fois en ligne.',
+    'aborted' => 'Cette fiche vient de changer. Réessayez.',
+    _ => "L’enregistrement a échoué. Réessayez.",
+  });
+
+  final String message;
 }

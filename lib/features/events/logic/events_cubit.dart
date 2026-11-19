@@ -65,7 +65,7 @@ class EventsCubit extends Cubit<EventsState> {
   Future<void> noter(String eventId, AvisEvenement avis) async {
     final event = evenement(eventId);
     if (event == null || _reponses[eventId]?.peutNoter(event, DateTime.now()) != true) {
-      throw StateError("L'avis n'est plus disponible.");
+      throw const ErreurSuiviEvenement("L’avis n’est plus disponible pour cet événement.");
     }
     await _repository.noter(eventId, avis);
   }
@@ -138,7 +138,7 @@ class EventsCubit extends Cubit<EventsState> {
     final maintenant = DateTime.now();
     DateTime? prochain;
     for (final e in _evenements) {
-      for (final date in [if (_bureau) e.jour, e.date, e.date.add(dureeSuiviEvenement)]) {
+      for (final date in [e.jour, e.date, e.date.add(dureeSuiviEvenement)]) {
         if (date.isAfter(maintenant) && (prochain == null || date.isBefore(prochain))) prochain = date;
       }
     }

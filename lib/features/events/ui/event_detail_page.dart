@@ -80,12 +80,12 @@ class _EventDetailPageState extends State<EventDetailPage> {
           final auth = context.read<AuthCubit>().state;
           final bureau = auth is AuthConnecte && auth.session.estAdmin;
           final maintenant = DateTime.now();
-          final passe = event.estPasse(maintenant);
+          final suivi = event.estPasse(maintenant) || (reponse?.presence == true && event.emargementOuvert(maintenant));
           final peutNoter = !bureau && (reponse?.peutNoter(event, maintenant) ?? false);
           final nb = _nbPersonnes ?? ((reponse?.vient ?? false) ? reponse!.nbPersonnes : 1);
           return Scaffold(
             appBar: AppBar(title: const TitreParquet()),
-            body: _Infos(event: event, reponse: bureau ? null : reponse, passe: passe),
+            body: _Infos(event: event, reponse: bureau ? null : reponse, passe: suivi),
             // Action principale en bas, pleine largeur, dans la zone du pouce (cours 5).
             bottomNavigationBar: bureau
                 ? SafeArea(
@@ -111,7 +111,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                       ),
                     ),
                   )
-                : event.annule || passe
+                : event.annule || suivi
                 ? null
                 : SafeArea(
                     child: Padding(

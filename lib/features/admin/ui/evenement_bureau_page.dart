@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:parquet/core/widgets/titre_parquet.dart';
 
 import '../../../core/widgets/etat_contenu.dart';
+import '../../events/data/event.dart';
 import '../../events/logic/events_cubit.dart';
 import '../../events/logic/events_state.dart';
 import '../../events/ui/event_detail_page.dart';
@@ -39,6 +40,7 @@ class EvenementBureauPage extends StatelessWidget {
           }
           final maintenant = DateTime.now();
           final passe = event.estPasse(maintenant);
+          final suiviOuvert = event.emargementOuvert(maintenant);
           return Scaffold(
             appBar: AppBar(title: const TitreParquet()),
             body: ListView(
@@ -54,7 +56,7 @@ class EvenementBureauPage extends StatelessWidget {
                         const Text('Événement annulé', style: TextStyle(fontWeight: FontWeight.w700)),
                         const SizedBox(height: 12),
                       ],
-                      if (event.emargementOuvert(maintenant)) ...[
+                      if (suiviOuvert) ...[
                         FilledButton.icon(
                           icon: const Icon(Icons.fact_check_outlined),
                           label: const Text('Émargement'),
@@ -72,15 +74,11 @@ class EvenementBureauPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                       ],
-                      _Reponses(afficherAvis: passe && !event.annule),
-                      if (event.description.trim().isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        Text(event.description.trim(), style: theme.textTheme.bodyLarge),
-                      ],
-                      if (event.lieu.trim().isNotEmpty) ...[
+                      if (event.description.trim().isNotEmpty || event.lieu.trim().isNotEmpty) ...[
+                        _Informations(event: event),
                         const SizedBox(height: 20),
-                        LieuEvenement(lieu: event.lieu.trim()),
                       ],
+                      _Reponses(afficherAvis: suiviOuvert),
                       if (!event.annule) ...[
                         const SizedBox(height: 20),
                         OutlinedButton(
@@ -129,6 +127,37 @@ class EvenementBureauPage extends StatelessWidget {
   }
 }
 
+class _Informations extends StatelessWidget {
+  const _Informations({required this.event});
+
+  final Event event;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final description = event.description.trim();
+    final lieu = event.lieu.trim();
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (description.isNotEmpty) ...[
+              Semantics(header: true, child: Text('Description', style: theme.textTheme.headlineSmall)),
+              const SizedBox(height: 6),
+              Text(description, style: theme.textTheme.bodyLarge),
+              if (lieu.isNotEmpty) const SizedBox(height: 16),
+            ],
+            if (lieu.isNotEmpty) LieuEvenement(lieu: lieu),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _Reponses extends StatelessWidget {
   const _Reponses({required this.afficherAvis});
 
@@ -141,6 +170,9 @@ class _Reponses extends StatelessWidget {
     return BlocBuilder<ReponsesCubit, ReponsesState>(
       builder: (context, state) {
         final total = state is ReponsesSuccess ? state.total : 0;
+        final invitations = state is ReponsesSuccess
+            ? state.reponses.where((r) => r.aRepondu).toList()
+            : const <ReponseBureau>[];
         final carte = Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(color: scheme.secondary, borderRadius: BorderRadius.circular(10)),
@@ -166,26 +198,20 @@ class _Reponses extends StatelessWidget {
             Text(message),
             OutlinedButton(onPressed: context.read<ReponsesCubit>().charger, child: const Text('Réessayer')),
           ],
-          ReponsesEmpty() => [
-            const EtatContenu(
-              icone: Icons.inbox_outlined,
-              titre: 'Aucune réponse pour le moment.',
-              message: 'Les confirmations et les refus des partenaires apparaîtront ici.',
-            ),
+          ReponsesEmpty() || ReponsesSuccess() => [
+            if (invitations.isEmpty)
+              const Card(
+                margin: EdgeInsets.zero,
+                child: ListTile(leading: Icon(Icons.inbox_outlined), title: Text('Aucune réponse pour le moment.')),
+              )
+            else
+              for (final r in invitations) _LigneReponse(r),
           ],
-          ReponsesSuccess(:final reponses) when reponses.any((r) => r.aRepondu) => [
-            for (final r in reponses)
-              if (r.aRepondu) _LigneReponse(r),
-          ],
-          ReponsesSuccess() => [const Text("Aucune réponse à l'invitation.")],
         };
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (state is ReponsesSuccess && state.reponses.any((r) => r.aRepondu)) ...[
-              carte,
-              const SizedBox(height: 20),
-            ],
+            if (invitations.isNotEmpty) ...[carte, const SizedBox(height: 20)],
             Semantics(header: true, child: Text('Réponses reçues', style: theme.textTheme.headlineSmall)),
             const SizedBox(height: 8),
             ...liste,
@@ -216,7 +242,10 @@ class _AvisRecus extends StatelessWidget {
         Semantics(header: true, child: Text('Avis des participants', style: theme.textTheme.headlineSmall)),
         const SizedBox(height: 8),
         if (avis.isEmpty)
-          const EtatContenu(icone: Icons.star_outline_rounded, titre: 'Aucun avis reçu')
+          const Card(
+            margin: EdgeInsets.zero,
+            child: ListTile(leading: Icon(Icons.star_outline_rounded), title: Text('Aucun avis reçu')),
+          )
         else ...[
           Card(
             margin: const EdgeInsets.only(bottom: 12),

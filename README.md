@@ -1,6 +1,6 @@
 # Parquet – Club partenaires
 
-App Flutter (Android + iOS) du réseau partenaires du club de basket : annuaire public, invitations avec réponse « Je viens », notifications. Serveur : Firebase (région europe-west9).
+App Flutter (Android et iOS) du réseau de partenaires du club de basket. Elle propose l’annuaire public, les invitations, les rappels, l’émargement et les avis sur les événements. Le projet Firebase `parquetclub` utilise la région `europe-west9`.
 
 ## Documentation
 
@@ -21,7 +21,7 @@ Pas de Cloud Functions ni de Storage : les actions du bureau se font depuis son 
 
 1. Console Firebase : Authentication (e-mail / mot de passe, modèles d'e-mail en français) et Firestore (édition Standard, `(default)`, `europe-west9`, mode production).
 2. `flutterfire configure`, puis ajouter `options: DefaultFirebaseOptions.currentPlatform` dans `lib/main.dart`.
-3. `firebase deploy --only firestore:rules`.
+3. Publier les règles avec `firebase deploy --only firestore:rules --project parquetclub`. Relancer cette commande après toute modification de `firestore.rules`, notamment avant de tester une nouvelle écriture sur le Firebase du club.
 4. Premier compte du bureau, à la main dans la console :
    - Authentication > Ajouter un utilisateur (e-mail + mot de passe provisoire), copier son UID ;
    - Firestore > collection `users` > document dont l'ID est cet UID, champs `email` (string), `role` = `admin` (string), `disabled` = `false` (boolean) ;
@@ -30,6 +30,8 @@ Pas de Cloud Functions ni de Storage : les actions du bureau se font depuis son 
 5. Supprimer un partenaire depuis l'app efface ses données ; son compte de connexion se supprime ensuite à la main (Authentication).
 
 Limite du forfait Spark : pas de notification push envoyée par un serveur (F14). Le rappel 2 jours avant (F16) est une notification locale et fonctionne.
+
+L’émargement et l’avis complètent la réponse existante dans `events/{eventId}/responses/{uid}`. Le bureau valide le champ `presence`, puis le partenaire présent peut écrire `note` et `commentaire`.
 
 ## Organisation (cahier des charges, partie 4)
 

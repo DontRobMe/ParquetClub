@@ -16,47 +16,14 @@ import 'event_detail_page.dart';
 import 'visuel_evenement.dart';
 
 /// Agenda du partenaire (F11) : la prochaine invitation en tête, puis « À suivre ».
-class EvenementsPage extends StatefulWidget {
-  const EvenementsPage({super.key, required this.actif, required this.bureau});
-
-  final bool actif;
-  final bool bureau;
-
-  @override
-  State<EvenementsPage> createState() => _EvenementsPageState();
-}
-
-class _EvenementsPageState extends State<EvenementsPage> {
-  bool _historique = false;
-  bool _proposePendantVisite = false;
-
-  @override
-  void didUpdateWidget(covariant EvenementsPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!widget.actif) _proposePendantVisite = false;
-    if (widget.actif && !oldWidget.actif) _proposerAvis();
-  }
-
-  void _proposerAvis() {
-    if (widget.bureau || !widget.actif || _proposePendantVisite) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !widget.actif || _proposePendantVisite || ModalRoute.of(context)?.isCurrent != true) return;
-      final state = context.read<EventsCubit>().state;
-      if (state is! EventsSuccess) return;
-      final event = state.aNoter(DateTime.now()).firstOrNull;
-      if (event == null) return;
-      _proposePendantVisite = true;
-      setState(() => _historique = true);
-      ouvrirAvisEvenement(context, event);
-    });
-  }
+class EvenementsPage extends StatelessWidget {
+  const EvenementsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const TitreParquet()),
-      body: BlocConsumer<EventsCubit, EventsState>(
-        listener: (_, _) => _proposerAvis(),
+      body: BlocBuilder<EventsCubit, EventsState>(
         builder: (context, state) => switch (state) {
           EventsLoading() => const SingleChildScrollView(
             padding: EdgeInsets.all(20),
@@ -73,49 +40,22 @@ class _EvenementsPageState extends State<EvenementsPage> {
   }
 
   Widget _contenu(EventsSuccess state) {
-    final maintenant = DateTime.now();
-    final aNoter = state.aNoter(maintenant).map((e) => e.id).toSet();
-    final liste = _historique ? state.historique(maintenant) : state.aVenir(maintenant);
+    final liste = state.aVenir(DateTime.now());
     return Column(
       children: [
         if (state.horsLigne) BandeauHorsLigne(derniereSynchro: state.derniereSynchro),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-          child: SizedBox(
-            width: double.infinity,
-            child: SegmentedButton<bool>(
-              showSelectedIcon: false,
-              segments: [
-                const ButtonSegment(value: false, label: Text('À venir')),
-                ButtonSegment(
-                  value: true,
-                  label: Badge(
-                    isLabelVisible: aNoter.isNotEmpty,
-                    label: Text('${aNoter.length}', semanticsLabel: '${aNoter.length} avis à laisser'),
-                    offset: const Offset(13, -7),
-                    child: const Text('Historique'),
-                  ),
-                ),
-              ],
-              selected: {_historique},
-              onSelectionChanged: (choix) => setState(() => _historique = choix.single),
-            ),
-          ),
-        ),
         Expanded(
           child: liste.isEmpty
-              ? Center(
+              ? const Center(
                   child: SingleChildScrollView(
                     child: EtatContenu(
-                      icone: _historique ? Icons.history : Icons.event_available_outlined,
-                      titre: _historique ? 'Aucun événement passé' : 'Aucun événement à venir',
-                      message: _historique
-                          ? 'Les rendez-vous terminés apparaîtront ici.'
-                          : 'Les prochains rendez-vous du club apparaîtront ici.',
+                      icone: Icons.event_available_outlined,
+                      titre: 'Aucun événement à venir',
+                      message: 'Les prochains rendez-vous du club apparaîtront ici.',
                     ),
                   ),
                 )
-              : _Agenda(liste: liste, reponses: state.reponses, historique: _historique, aNoter: aNoter),
+              : _Agenda(liste: liste, reponses: state.reponses),
         ),
       ],
     );
@@ -133,23 +73,20 @@ void _ouvrirEvenement(BuildContext context, String eventId) {
 }
 
 class _Agenda extends StatelessWidget {
-  const _Agenda({required this.liste, required this.reponses, required this.historique, required this.aNoter});
+  const _Agenda({required this.liste, required this.reponses});
 
   final List<Event> liste;
   final Map<String, EventResponse> reponses;
-  final bool historique;
-  final Set<String> aNoter;
 
   @override
   Widget build(BuildContext context) {
-    final prochain = historique ? null : liste.where((e) => !e.annule).firstOrNull;
+    final prochain = liste.where((e) => !e.annule).firstOrNull;
     final suivants = liste.where((e) => e != prochain);
     return ListView(
-      key: PageStorageKey(historique),
       padding: const EdgeInsets.only(bottom: 32),
       children: [
         if (prochain != null) _ProchaineInvitation(prochain, reponses[prochain.id]),
-        if (!historique && suivants.isNotEmpty)
+        if (suivants.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
             child: Semantics(header: true, child: Text('À suivre', style: Theme.of(context).textTheme.headlineSmall)),
@@ -157,7 +94,7 @@ class _Agenda extends StatelessWidget {
         for (final e in suivants)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            child: _Ligne(e, reponses[e.id], historique: historique, aNoter: aNoter.contains(e.id)),
+            child: LigneEvenement(e, reponses[e.id]),
           ),
       ],
     );
@@ -176,7 +113,8 @@ class _ProchaineInvitation extends StatelessWidget {
     final theme = Theme.of(context);
     final auth = context.read<AuthCubit>().state;
     final bureau = auth is AuthConnecte && auth.session.estAdmin;
-    final statut = texteStatut(event, reponse);
+    final peutNoter = reponse?.peutNoter(event, DateTime.now()) ?? false;
+    final statut = texteStatut(event, reponse, passe: reponse?.presence == true);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -215,17 +153,24 @@ class _ProchaineInvitation extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 12),
-              FilledButton.icon(
-                icon: Icon(bureau ? Icons.groups_outlined : Icons.arrow_forward),
-                label: Text(
-                  bureau
-                      ? 'Voir les réponses'
-                      : reponse == null
-                      ? "Répondre à l'invitation"
-                      : 'Voir ma réponse',
+              if (!bureau && peutNoter)
+                FilledButton.icon(
+                  icon: const Icon(Icons.star_outline_rounded),
+                  label: const Text('Donner mon avis'),
+                  onPressed: () => ouvrirAvisEvenement(context, event),
+                )
+              else
+                FilledButton.icon(
+                  icon: Icon(bureau ? Icons.groups_outlined : Icons.arrow_forward),
+                  label: Text(
+                    bureau
+                        ? 'Voir les réponses'
+                        : reponse == null
+                        ? "Répondre à l'invitation"
+                        : 'Voir ma réponse',
+                  ),
+                  onPressed: () => _ouvrirEvenement(context, event.id),
                 ),
-                onPressed: () => _ouvrirEvenement(context, event.id),
-              ),
             ],
           ),
         ),
@@ -234,8 +179,8 @@ class _ProchaineInvitation extends StatelessWidget {
   }
 }
 
-class _Ligne extends StatelessWidget {
-  const _Ligne(this.event, this.reponse, {required this.historique, required this.aNoter});
+class LigneEvenement extends StatelessWidget {
+  const LigneEvenement(this.event, this.reponse, {super.key, this.historique = false, this.aNoter = false});
 
   final Event event;
   final EventResponse? reponse;
@@ -291,17 +236,15 @@ class _Ligne extends StatelessWidget {
                       ),
                     ),
                     Text(details, style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                    if (aNoter)
+                      Text(
+                        'À noter',
+                        style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onPrimaryContainer),
+                      ),
                   ],
                 ),
               ),
-              if (aNoter)
-                Chip(
-                  avatar: Icon(Icons.star_outline_rounded, color: theme.colorScheme.onPrimaryContainer, size: 18),
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  label: const Text('À noter'),
-                )
-              else
-                const Icon(Icons.arrow_forward),
+              const Icon(Icons.arrow_forward),
             ],
           ),
         ),

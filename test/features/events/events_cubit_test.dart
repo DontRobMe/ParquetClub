@@ -107,16 +107,17 @@ void main() {
     expect(Event.fromMap(event.id, donnees).photo, isNull);
   });
 
-  test("l'émargement ouvre le jour même et seul un présent peut noter après l'heure", () {
+  test("la présence validée ouvre immédiatement l'avis le jour même", () {
     final evenement = Event(id: 'test', titre: 'Match', date: DateTime(2026, 11, 19, 19));
-    const present = EventResponse(vient: false, nbPersonnes: 0, presence: true);
+    final present = EventResponse.fromMap({'presence': true, 'note': null});
     const absent = EventResponse(vient: true, nbPersonnes: 2, presence: false);
-    final avant = DateTime(2026, 11, 19, 8);
-    expect(evenement.emargementOuvert(DateTime(2026, 11, 18, 23, 59)), isFalse);
-    expect(evenement.emargementOuvert(avant), isTrue);
-    expect(present.peutNoter(evenement, avant), isFalse);
-    expect(present.peutNoter(evenement, evenement.date), isTrue);
-    expect(absent.peutNoter(evenement, evenement.date), isFalse);
+    final laVeille = DateTime(2026, 11, 18, 23, 59);
+    final leMatin = DateTime(2026, 11, 19, 8);
+    expect(evenement.emargementOuvert(laVeille), isFalse);
+    expect(evenement.emargementOuvert(leMatin), isTrue);
+    expect(present.peutNoter(evenement, laVeille), isFalse);
+    expect(present.peutNoter(evenement, leMatin), isTrue);
+    expect(absent.peutNoter(evenement, leMatin), isFalse);
   });
 
   group('rappel 2 jours avant (F16)', () {

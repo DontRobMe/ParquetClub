@@ -5,6 +5,9 @@ import 'package:parquet/core/widgets/titre_parquet.dart';
 import '../../../core/confidentialite_page.dart';
 import '../../../core/widgets/etat_contenu.dart';
 import '../../admin/logic/verrou_cubit.dart';
+import '../../events/logic/events_cubit.dart';
+import '../../events/logic/events_state.dart';
+import '../../events/ui/historique_evenements_page.dart';
 import '../../partners/logic/profile_cubit.dart';
 import '../../partners/ui/fiche_form_page.dart';
 import '../../partners/ui/partner_logo.dart';
@@ -56,7 +59,12 @@ class ProfilPage extends StatelessWidget {
             session.estAdmin ? 'Compte du bureau' : 'Compte partenaire',
             style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
           ),
-          if (!session.estAdmin) ...[const SizedBox(height: 24), _MaFiche(ouvrir: ouvrir)],
+          if (!session.estAdmin) ...[
+            const SizedBox(height: 24),
+            _MaFiche(ouvrir: ouvrir),
+            const SizedBox(height: 24),
+            const _Historique(),
+          ],
           if (session.estAdmin) ...[const SizedBox(height: 24), const _Verrouillage()],
           const SizedBox(height: 24),
           TextButton(
@@ -68,6 +76,33 @@ class ProfilPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _Historique extends StatelessWidget {
+  const _Historique();
+
+  @override
+  Widget build(BuildContext context) {
+    final aNoter = context.select((EventsCubit cubit) {
+      final state = cubit.state;
+      return state is EventsSuccess ? state.aNoter(DateTime.now()).length : 0;
+    });
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        leading: Badge(
+          isLabelVisible: aNoter > 0,
+          label: Text('$aNoter', semanticsLabel: '$aNoter avis à laisser'),
+          child: const Icon(Icons.history),
+        ),
+        title: const Text('Historique des événements', style: TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: aNoter == 0 ? null : Text(aNoter == 1 ? '1 avis à laisser' : '$aNoter avis à laisser'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () =>
+            Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const HistoriqueEvenementsPage())),
       ),
     );
   }

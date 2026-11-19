@@ -84,16 +84,16 @@ class _OngletsPageState extends State<OngletsPage> with SingleTickerProviderStat
           ]
         : [
             (const AnnuairePage(), const NavigationDestination(icon: Icon(Icons.grid_view), label: 'Annuaire')),
-            (
-              EvenementsPage(actif: _index == 1, bureau: session.estAdmin),
-              NavigationDestination(
-                icon: Badge(isLabelVisible: avisEnAttente, child: const Icon(Icons.event)),
-                label: 'Événements',
-              ),
-            ),
+            (const EvenementsPage(), const NavigationDestination(icon: Icon(Icons.event), label: 'Événements')),
             (
               ProfilPage(session: session),
-              const NavigationDestination(icon: Icon(Icons.person_outline), label: 'Mon profil'),
+              NavigationDestination(
+                icon: Semantics(
+                  label: avisEnAttente ? 'Avis à laisser' : null,
+                  child: Badge(isLabelVisible: avisEnAttente, child: const Icon(Icons.person_outline)),
+                ),
+                label: 'Mon profil',
+              ),
             ),
             if (session.estAdmin)
               (

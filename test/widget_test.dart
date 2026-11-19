@@ -379,25 +379,31 @@ void main() {
     expect(find.text('Je viens'), findsNothing);
   });
 
-  testWidgets("historique : propose l'avis d'un participant présent et retire la pastille après l'envoi", (
-    tester,
-  ) async {
-    final passe = Event(id: 'passe', titre: 'Match du club', date: DateTime.now().subtract(const Duration(days: 1)));
+  testWidgets("profil : ouvre l'avis quand la présence est validée le jour même", (tester) async {
+    final maintenant = DateTime.now();
+    final match = Event(
+      id: 'match',
+      titre: 'Match du club',
+      date: DateTime(maintenant.year, maintenant.month, maintenant.day, 23, 59, 59, 999),
+    );
     await lancer(tester, connecte: true);
-    events.envoyer([passe, soiree]);
-    await tester.pump();
-    events.envoyerReponse(passe.id, const EventResponse(vient: true, nbPersonnes: 2, presence: true));
-    await tester.pump();
-    expect(find.byWidgetPredicate((w) => w is Badge && w.isLabelVisible), findsOneWidget);
-
+    events.envoyer([match, soiree]);
     await tester.tap(find.text('Événements'));
+    await tester.pumpAndSettle();
+    expect(find.text('Historique'), findsNothing);
+    await tester.tap(find.text('Mon profil'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Historique des événements'));
+    await tester.pumpAndSettle();
+    expect(find.text('Comment était cet événement ?'), findsNothing);
+    events.envoyerReponse(match.id, const EventResponse(vient: true, nbPersonnes: 2, presence: true));
     await tester.pumpAndSettle();
     expect(find.text('Comment était cet événement ?'), findsOneWidget);
     await tester.tap(find.text('Plus tard'));
     await tester.pumpAndSettle();
     expect(find.text('À noter'), findsOneWidget);
 
-    await tester.tap(find.text(passe.titre));
+    await tester.tap(find.text(match.titre));
     await tester.pumpAndSettle();
     expect(find.text('Je viens'), findsNothing);
     await tester.tap(find.text('Noter cet événement'));
@@ -412,24 +418,40 @@ void main() {
     expect(find.text('Noter cet événement'), findsNothing);
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
+    expect(find.textContaining('Votre note · 4/5'), findsOneWidget);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
     expect(find.byWidgetPredicate((w) => w is Badge && w.isLabelVisible), findsNothing);
   });
 
   testWidgets('bureau : émarge un partenaire sans RSVP et affiche les avis reçus', (tester) async {
     ecranHaut(tester);
-    final passe = Event(id: 'passe', titre: 'Match du club', date: DateTime.now().subtract(const Duration(days: 1)));
+    final passe = Event(
+      id: 'passe',
+      titre: 'Match du club',
+      date: DateTime.now().subtract(const Duration(days: 1)),
+      description: 'Programme du match',
+    );
     await lancer(tester, connecte: true, estBureau: true);
     partners.envoyer([cap, grain]);
     events.envoyer([passe]);
     admin.comptes.add(const [Compte(uid: 'c', email: 'cap@example.test', actif: true)]);
+    await tester.tap(find.text('Mon profil'));
+    await tester.pumpAndSettle();
+    expect(find.text('Historique des événements'), findsNothing);
     await tester.tap(find.text('Administration'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Gérer les événements'));
     await tester.pumpAndSettle();
+    expect(find.text('Historique'), findsOneWidget);
     await tester.tap(find.text(passe.titre));
     await tester.pump();
     admin.reponses.add(const []);
     await tester.pumpAndSettle();
+    expect(
+      tester.getTopLeft(find.text(passe.description)).dy,
+      lessThan(tester.getTopLeft(find.text('Réponses reçues')).dy),
+    );
     await tester.tap(find.text('Émargement'));
     await tester.pumpAndSettle();
     expect(find.text('Invitation sans réponse'), findsOneWidget);

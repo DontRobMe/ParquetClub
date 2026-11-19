@@ -30,7 +30,7 @@ class _AvisEvenementSheetState extends State<_AvisEvenementSheet> {
   final _commentaire = TextEditingController();
   int _note = 0;
   bool _envoi = false;
-  bool _erreur = false;
+  String? _erreur;
 
   @override
   void dispose() {
@@ -41,7 +41,7 @@ class _AvisEvenementSheetState extends State<_AvisEvenementSheet> {
   Future<void> _envoyer() async {
     setState(() {
       _envoi = true;
-      _erreur = false;
+      _erreur = null;
     });
     try {
       await widget.enregistrer(AvisEvenement(note: _note, commentaire: _commentaire.text.trim()));
@@ -49,11 +49,11 @@ class _AvisEvenementSheetState extends State<_AvisEvenementSheet> {
       final messager = ScaffoldMessenger.of(context);
       Navigator.of(context).pop();
       messager.showSnackBar(const SnackBar(content: Text('Merci pour votre retour !')));
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
         _envoi = false;
-        _erreur = true;
+        _erreur = e is ErreurSuiviEvenement ? e.message : "L’avis n’a pas pu être envoyé. Réessayez.";
       });
     }
   }
@@ -109,13 +109,10 @@ class _AvisEvenementSheetState extends State<_AvisEvenementSheet> {
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(labelText: 'Commentaire (facultatif)'),
             ),
-            if (_erreur)
+            if (_erreur != null)
               Semantics(
                 liveRegion: true,
-                child: Text(
-                  "L'avis n'a pas pu être envoyé. Vérifiez votre connexion et réessayez.",
-                  style: TextStyle(color: theme.colorScheme.error),
-                ),
+                child: Text(_erreur!, style: TextStyle(color: theme.colorScheme.error)),
               ),
             const SizedBox(height: 8),
             FilledButton(

@@ -37,6 +37,9 @@ class EventsSuccess extends EventsState {
 
   List<Event> aVenir(DateTime maintenant) => evenements.where((e) => !e.estPasse(maintenant)).toList();
   List<Event> historique(DateTime maintenant) => evenements.reversed.where((e) => e.estPasse(maintenant)).toList();
+  List<Event> historiquePartenaire(DateTime maintenant) => evenements.reversed
+      .where((e) => e.estPasse(maintenant) || (e.emargementOuvert(maintenant) && reponses[e.id]?.presence == true))
+      .toList();
   List<Event> aNoter(DateTime maintenant) =>
       evenements.reversed.where((e) => reponses[e.id]?.peutNoter(e, maintenant) ?? false).toList();
 }

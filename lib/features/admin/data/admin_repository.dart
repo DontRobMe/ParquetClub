@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../events/data/event.dart';
 
@@ -225,13 +226,14 @@ class AdminRepository {
     try {
       await _firestore.runTransaction<void>((transaction) async {
         final reponse = (await transaction.get(ref)).data();
-        if (reponse?.containsKey('note') == true) {
+        if (AvisEvenement.depuisReponse(reponse) != null) {
           throw const AdminErreur('La présence est déjà liée à un avis.');
         }
         transaction.set(ref, {'presence': present}, SetOptions(merge: true));
       });
-    } on FirebaseException {
-      throw const AdminErreur("La présence n'a pas pu être enregistrée. Réessayez.");
+    } on FirebaseException catch (e) {
+      if (kDebugMode) debugPrint('Parquet émargement Firestore [${e.code}]');
+      throw AdminErreur(ErreurSuiviEvenement.depuisFirestore(e.code).message);
     }
   }
 

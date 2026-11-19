@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../admin/data/admin_repository.dart' show ajouterAuJournal;
 import 'event.dart';
@@ -44,15 +45,23 @@ class EventRepository {
     'updatedAt': FieldValue.serverTimestamp(),
   }, SetOptions(merge: true));
 
-  Future<void> noter(String eventId, AvisEvenement avis) {
+  Future<void> noter(String eventId, AvisEvenement avis) async {
     final ref = _reponse(eventId);
-    return _firestore.runTransaction<void>((transaction) async {
-      final reponse = (await transaction.get(ref)).data();
-      if (reponse?['presence'] != true || reponse!.containsKey('note')) {
-        throw StateError("L'avis n'est plus disponible.");
-      }
-      transaction.update(ref, {'note': avis.note, 'commentaire': avis.commentaire});
-    });
+    try {
+      await _firestore.runTransaction<void>((transaction) async {
+        final reponse = (await transaction.get(ref)).data();
+        if (reponse?['presence'] != true) {
+          throw const ErreurSuiviEvenement('Le bureau doit valider votre présence avant l’envoi d’un avis.');
+        }
+        if (AvisEvenement.depuisReponse(reponse) != null) {
+          throw const ErreurSuiviEvenement('Vous avez déjà envoyé un avis pour cet événement.');
+        }
+        transaction.update(ref, avis.toMap());
+      });
+    } on FirebaseException catch (e) {
+      if (kDebugMode) debugPrint('Parquet avis Firestore [${e.code}]');
+      throw ErreurSuiviEvenement.depuisFirestore(e.code);
+    }
   }
 
   /// F10, bureau uniquement (règle `isAdmin`). Un identifiant vide crée l'événement.

@@ -92,24 +92,30 @@ service cloud.firestore {
           return d.vient is bool && d.nbPersonnes is int
             && d.nbPersonnes >= 0 && d.nbPersonnes <= 10;
         }
+        function aUneNote(d) {
+          let note = d.get('note', null);
+          return note is int && note >= 1 && note <= 5;
+        }
         function peutRepondre() {
-          return partenaire() && evenement().statut != 'annule' && request.time < evenement().date;
+          let e = evenement();
+          return partenaire() && e.get('statut', 'prevu') != 'annule' && request.time < e.date;
         }
         function suiviDisponible() {
-          return evenement().statut != 'annule'
-            && request.time < evenement().date + duration.value(365, 'd');
+          let e = evenement();
+          return e.get('statut', 'prevu') != 'annule'
+            && request.time >= e.date - duration.value(1, 'd')
+            && request.time < e.date + duration.value(365, 'd');
         }
         function peutEmarger() {
           // Le bureau ouvre l'interface à minuit en heure locale. Le serveur borne la fenêtre à J-1.
           return isAdmin() && suiviDisponible()
-            && request.time >= evenement().date - duration.value(1, 'd')
             && request.resource.data.presence is bool;
         }
         function peutNoter() {
           let d = request.resource.data;
-          return partenaire() && suiviDisponible() && request.time >= evenement().date
-            && resource.data.get('presence', false) == true && !('note' in resource.data)
-            && d.note is int && d.note >= 1 && d.note <= 5 && texte(d.commentaire, 500);
+          return partenaire() && suiviDisponible()
+            && resource.data.get('presence', false) == true && !aUneNote(resource.data)
+            && aUneNote(d) && texte(d.commentaire, 500);
         }
 
         allow read: if isOwner(uid) || isAdmin();
@@ -120,7 +126,7 @@ service cloud.firestore {
             && request.resource.data.keys().hasOnly(['presence']));
         allow update: if (peutRepondre() && reponseValide()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vient', 'nbPersonnes', 'updatedAt']))
-          || (peutEmarger() && !('note' in resource.data)
+          || (peutEmarger() && !aUneNote(resource.data)
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['presence']))
           || (peutNoter()
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['note', 'commentaire']));
