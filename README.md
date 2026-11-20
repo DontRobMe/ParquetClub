@@ -4,7 +4,7 @@ App Flutter (Android et iOS) du réseau de partenaires du club de basket. Elle p
 
 ## Documentation
 
-Cahier des charges, maquette, charte et fiches des stores : voir [docs/](docs/README.md).
+Cahier des charges, questions du jury, architecture, maquette, charte et fiches des stores : voir [docs/](docs/README.md).
 
 ## Lancer
 
@@ -43,14 +43,14 @@ Pas de Cloud Functions ni de Storage : les actions du bureau se font depuis son 
 `firestore.rules`, et les logos sont rangés dans les fiches.
 
 1. Console Firebase : Authentication (e-mail / mot de passe, modèles d'e-mail en français) et Firestore (édition Standard, `(default)`, `europe-west9`, mode production).
-2. `flutterfire configure`, puis ajouter `options: DefaultFirebaseOptions.currentPlatform` dans `lib/main.dart`.
+2. Déjà fait dans ce dépôt pour `parquetclub` (`lib/firebase_options.dart`, `android/app/google-services.json`). Pour un autre projet Firebase : `flutterfire configure`.
 3. Publier les règles avec `firebase deploy --only firestore:rules --project parquetclub`. Relancer cette commande après toute modification de `firestore.rules`, notamment avant de tester une nouvelle écriture sur le Firebase du club.
 4. Premier compte du bureau, à la main dans la console :
    - Authentication > Ajouter un utilisateur (e-mail + mot de passe provisoire), copier son UID ;
    - Firestore > collection `users` > document dont l'ID est cet UID, champs `email` (string), `role` = `admin` (string), `disabled` = `false` (boolean) ;
    - le bénévole choisit ensuite son mot de passe avec « Mot de passe oublié ».
    Les comptes suivants (bureau et partenaires) se créent depuis l'app.
-5. Supprimer un partenaire depuis l'app efface ses données ; son compte de connexion se supprime ensuite à la main (Authentication).
+5. Supprimer un partenaire depuis l'app efface ses données. Sans Cloud Functions, l'app ne peut pas supprimer le compte de connexion d'un autre : il s'efface lui-même à sa prochaine tentative de connexion (`AuthRepository`).
 
 Limite du forfait Spark : pas de notification push envoyée par un serveur (F14). Le rappel 2 jours avant (F16) est une notification locale et fonctionne.
 
@@ -61,12 +61,14 @@ L’émargement et l’avis complètent la réponse existante dans `events/{even
 MVVM : Vue → Cubit (ViewModel) → Repository → Firebase.
 
 ```
-lib/core/theme/app_theme.dart     seul fichier de couleurs et polices (cours 5)
-lib/features/<auth|partners|events|admin>/
-    data/    repositories, seuls à parler à Firebase
+lib/core/                         thème (seul fichier de couleurs et polices, cours 5), navigation, widgets communs
+lib/features/<auth|partners|events|admin|notifications>/
+    data/    repositories, seuls à parler à Firebase ou au téléphone
     logic/   Cubits et états (sealed class : chargement, erreur, vide, succès)
     ui/      écrans
-test/                             un test par Cubit + test widget « Je viens » (cours 6)
+test/features/                    un test par Cubit, en Arrange / Act / Assert (cours 6)
+test/widget_test.dart             parcours principaux, dont « Je viens » hors connexion
+test/accessibilite_test.dart      audit WCAG : zones tactiles, libellés, contraste, texte agrandi ×2
 firestore.rules                   droits vérifiés côté serveur
 ```
 
@@ -78,7 +80,7 @@ Polices : Barlow Condensed et DM Sans (licence OFL, `assets/fonts`).
 
 1. **Analyse et tests** : format, `flutter analyze`, `flutter test`.
 2. **Build Android** : `app-release.aab` obfusqué, numéro de build = numéro du run, téléchargeable dans l'onglet Actions (avec les symboles pour décoder les plantages).
-3. **Build iOS sans signature** (sur `main` seulement) : vérifie que l'app compile, faute de Mac dans l'équipe.
+3. **Build iOS sans signature** (sur `main` seulement, les minutes macOS coûtent cher) : vérifie que l'app compile, faute de Mac dans l'équipe, et publie un `.ipa` non signé. Il ne s'installe pas tel quel : il faut le signer avec un compte Apple Developer.
 
 ## Publier
 
@@ -110,4 +112,4 @@ Sans clé, le build de publication est signé avec la clé de debug : il compile
 
 ### Fiches des stores
 
-Textes dans `Fiche_App_Store.pdf` et `Fiche_Google_Play.pdf` ; remplacer « [Nom du club] », ajouter l'icône, les captures et le lien vers la politique de confidentialité.
+Textes dans [`docs/stores/`](docs/stores/). Avant l'envoi : remplacer « [Nom du club] » (fiche Google Play), l'adresse `support@exemple-club.fr` et le site d'exemple, puis ajouter l'icône, les captures et le lien vers la politique de confidentialité.
