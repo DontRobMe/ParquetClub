@@ -24,7 +24,7 @@ flutter run
 | `demo.bat --tout --apercu` | Affiche les opérations prévues pour une remise à zéro des collections métier. |
 | `demo.bat --tout` | Après saisie de `EFFACER parquetclub`, efface les événements et leurs réponses, les fiches partenaires et leurs sous-collections, le journal et les profils Firestore préfixés `parquet-demo-`, puis charge la démo. Les autres profils `users` sont conservés. |
 
-Le script crée `demo-admin@parquet.example` pour le bureau et `presta1@parquet.fr` à `presta12@parquet.fr` pour les partenaires. Les comptes gardent leur UID à chaque lancement. Les nouveaux mots de passe sont générés et affichés à la fin, avec un mot de passe séparé pour le bureau. Le profil `presta12` sert à montrer un accès désactivé dans l’app. Si une adresse est déjà liée à un UID extérieur au jeu de démo, le script s’arrête avant toute écriture.
+Le script crée `demo-admin@parquet.fr` (mot de passe `bureau`) pour le bureau et `presta1@parquet.fr` à `presta12@parquet.fr` (mot de passe `presta`) pour les partenaires. Les comptes gardent leur UID à chaque lancement. Ces mots de passe sont publics : à changer avant toute vraie mise en service. Le profil `presta12` sert à montrer un accès désactivé dans l’app. Si une adresse est déjà liée à un UID extérieur au jeu de démo, le script s’arrête avant toute écriture.
 
 Pour présenter le parcours complet avec un compte `presta1@parquet.fr` existant, le bureau peut l’émarger sur **Soirée partenaires à Beaublanc**. Dans **Mon profil → Historique des événements**, **Rencontres au bord du parquet** contient déjà une présence validée sans avis. Le journal et les événements utilisent des dates calculées à chaque lancement.
 

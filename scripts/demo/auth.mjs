@@ -13,7 +13,8 @@ export async function preparerComptes(client) {
     const comptesLies = existants.filter(({ email, localId }) =>
       email?.toLowerCase() === compte.email || localId === compte.localId,
     );
-    if (comptesLies.some(({ localId, email }) => localId !== compte.localId || email?.toLowerCase() !== compte.email)) {
+    // Même UID avec un autre e-mail : la seed le met à jour. Même e-mail sur un autre UID : conflit.
+    if (comptesLies.some(({ localId }) => localId !== compte.localId)) {
       throw new Error(`Conflit dans Firebase Authentication pour ${compte.email}. Le compte existant a été conservé.`);
     }
     return { ...compte, existe: comptesLies.length > 0 };
@@ -32,7 +33,7 @@ export async function appliquerComptes(client, comptes) {
     try {
       const { body } = await client.post(
         existe ? `${racine}:update` : racine,
-        { localId, password, ...(existe ? { disableUser: false } : { email }) },
+        { localId, password, email, ...(existe ? { disableUser: false } : {}) },
         confidentialite,
       );
       if (body.localId !== localId) throw new Error('UID retourné inattendu.');

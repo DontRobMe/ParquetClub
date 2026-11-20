@@ -4,7 +4,7 @@ import { evenements, partenaires } from './catalogue.mjs';
 export const projet = 'parquetclub';
 export const baseDocuments = `projects/${projet}/databases/(default)/documents`;
 export const prefixeDemo = 'parquet-demo-';
-const bureauDemo = { localId: `${prefixeDemo}bureau`, email: 'demo-admin@parquet.example' };
+const bureauDemo = { localId: `${prefixeDemo}bureau`, email: 'demo-admin@parquet.fr' };
 const partenairesDemo = partenaires.map((_, indice) => ({
   localId: `${prefixeDemo}presta${indice + 1}`, email: `presta${indice + 1}@parquet.fr`,
 }));
