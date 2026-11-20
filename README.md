@@ -4,7 +4,7 @@ App Flutter (Android et iOS) du réseau de partenaires du club de basket. Elle p
 
 ## Documentation
 
-Cahier des charges, questions du jury, architecture, maquette, charte et fiches des stores : voir [docs/](docs/README.md).
+Cahier des charges, architecture, maquette, charte et fiches des stores : voir [docs/](docs/README.md).
 
 ## Lancer
 
