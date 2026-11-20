@@ -2,6 +2,18 @@
 
 App Flutter (Android et iOS) du réseau de partenaires du club de basket. Elle propose l’annuaire public, les invitations, les rappels, l’émargement et les avis sur les événements. Le projet Firebase `parquetclub` utilise la région `europe-west9`.
 
+## Comptes de test
+
+Créés par la seed (`demo.bat`, voir plus bas) sur le Firebase du club :
+
+| Rôle | E-mail | Mot de passe |
+| --- | --- | --- |
+| Bureau (administration) | `demo-admin@parquet.fr` | `bureau` |
+| Partenaire | `presta1@parquet.fr` à `presta11@parquet.fr` | `presta` |
+| Partenaire désactivé | `presta12@parquet.fr` | `presta` |
+
+L’annuaire se consulte sans compte. Ces mots de passe sont publics : à changer avant toute vraie mise en service.
+
 ## Documentation
 
 Cahier des charges, architecture, maquette, charte et fiches des stores : voir [docs/](docs/README.md).
@@ -24,7 +36,7 @@ flutter run
 | `demo.bat --tout --apercu` | Affiche les opérations prévues pour une remise à zéro des collections métier. |
 | `demo.bat --tout` | Après saisie de `EFFACER parquetclub`, efface les événements et leurs réponses, les fiches partenaires et leurs sous-collections, le journal et les profils Firestore préfixés `parquet-demo-`, puis charge la démo. Les autres profils `users` sont conservés. |
 
-Le script crée `demo-admin@parquet.fr` (mot de passe `bureau`) pour le bureau et `presta1@parquet.fr` à `presta12@parquet.fr` (mot de passe `presta`) pour les partenaires. Les comptes gardent leur UID à chaque lancement. Ces mots de passe sont publics : à changer avant toute vraie mise en service. Le profil `presta12` sert à montrer un accès désactivé dans l’app. Si une adresse est déjà liée à un UID extérieur au jeu de démo, le script s’arrête avant toute écriture.
+Le script crée les [comptes de test](#comptes-de-test) ; ils gardent leur UID à chaque lancement. Le profil `presta12` sert à montrer un accès désactivé dans l’app. Si une adresse est déjà liée à un UID extérieur au jeu de démo, le script s’arrête avant toute écriture.
 
 Pour présenter le parcours complet avec un compte `presta1@parquet.fr` existant, le bureau peut l’émarger sur **Soirée partenaires à Beaublanc**. Dans **Mon profil → Historique des événements**, **Rencontres au bord du parquet** contient déjà une présence validée sans avis. Le journal et les événements utilisent des dates calculées à chaque lancement.
 
