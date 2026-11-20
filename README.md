@@ -13,6 +13,29 @@ flutter pub get
 flutter run
 ```
 
+## Démo Windows
+
+[`demo.bat`](demo.bat) utilise Node.js 20 ou plus récent et la session Firebase CLI connectée avec `npx firebase-tools@15.37.0 login`. Il travaille sur Firebase Authentication et la base Firestore `(default)` du projet `parquetclub`. Les données sont visibles dans la [console Cloud Firestore](https://console.firebase.google.com/project/parquetclub/firestore/data) et les comptes dans la [console Authentication](https://console.firebase.google.com/project/parquetclub/authentication/users).
+
+| Commande | Action |
+| --- | --- |
+| `demo.bat --apercu` | Affiche les opérations prévues en lecture seule. |
+| `demo.bat` | Initialise les comptes de démo et remplace les documents préfixés `parquet-demo-`. |
+| `demo.bat --tout --apercu` | Affiche les opérations prévues pour une remise à zéro des collections métier. |
+| `demo.bat --tout` | Après saisie de `EFFACER parquetclub`, efface les événements et leurs réponses, les fiches partenaires et leurs sous-collections, le journal et les profils Firestore préfixés `parquet-demo-`, puis charge la démo. Les autres profils `users` sont conservés. |
+
+Le script crée `demo-admin@parquet.example` pour le bureau et `presta1@parquet.fr` à `presta12@parquet.fr` pour les partenaires. Les comptes gardent leur UID à chaque lancement. Les nouveaux mots de passe sont générés et affichés à la fin, avec un mot de passe séparé pour le bureau. Le profil `presta12` sert à montrer un accès désactivé dans l’app. Si une adresse est déjà liée à un UID extérieur au jeu de démo, le script s’arrête avant toute écriture.
+
+Pour présenter le parcours complet avec un compte `presta1@parquet.fr` existant, le bureau peut l’émarger sur **Soirée partenaires à Beaublanc**. Dans **Mon profil → Historique des événements**, **Rencontres au bord du parquet** contient déjà une présence validée sans avis. Le journal et les événements utilisent des dates calculées à chaque lancement.
+
+Les profils et partenariats de démo sont fictifs. Les marques et leurs logos servent d’exemples visuels.
+
+| Visuels | Provenance |
+| --- | --- |
+| Logos Nike et Fnac | [Nike sur Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Logo_NIKE.svg), [Fnac sur Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Fnac_Logo.svg) |
+| Logos adidas, Boulanger, New Balance et PUMA | [Simple Icons](https://simpleicons.org/) |
+| Photos d’illustration pour les événements | [Zekai Zhu](https://www.pexels.com/photo/11831850/), [Piotr Arnoldes](https://www.pexels.com/photo/7156048/), [Maria Orlova](https://www.pexels.com/photo/4946389/) sous [licence Pexels](https://www.pexels.com/license/) |
+
 ## Mettre en place Firebase (une fois)
 
 Forfait **Spark** (gratuit, sans carte) : Authentication et Firestore seulement, région `europe-west9` (Paris).
