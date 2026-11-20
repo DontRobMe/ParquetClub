@@ -2,7 +2,7 @@
 
 | Document | Contenu |
 |---|---|
-| [Cahier des charges](cahier-des-charges.md) | Besoins, fonctionnalités et priorités, architecture, sécurité, RGPD, questions du jury. Copie du document de référence (doc Claude) |
+| [Cahier des charges](cahier-des-charges.pdf) | Version finale du 20 novembre 2026 : besoins, fonctionnalités et priorités, architecture, sécurité, RGPD, questions du jury. Version texte antérieure : [cahier-des-charges.md](cahier-des-charges.md) |
 | [Schéma d'architecture](architecture.png) | Vue → Cubit → Repository → Firebase (forfait Spark) et téléphone ; source : [architecture.html](architecture.html) |
 | [Planche de la maquette](maquette/planche.png) | Lancement, annuaire public, invitation partenaire, suivi par le bureau |
 | [Prototype interactif](maquette/parquet-prototype.html) | Maquette cliquable, à ouvrir dans un navigateur après téléchargement |
