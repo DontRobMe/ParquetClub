@@ -47,7 +47,15 @@ class AuthRepository {
           // Hors ligne au premier lancement, le profil peut manquer du cache : on attend le réseau.
           if (!doc.exists && doc.metadata.isFromCache) return;
           final data = doc.data();
-          if (data == null || data['disabled'] == true) {
+          if (data == null) {
+            // Partenaire supprimé par le bureau (F5). Cet écouteur se déclenche dès la connexion, avant que
+            // connecter() ait fini : s'il se contentait de déconnecter, connecter() ne pourrait plus effacer
+            // le compte (plus d'utilisateur courant). On l'efface donc ici, tant qu'il est connecté.
+            // Session trop ancienne (requires-recent-login) : simple déconnexion, effacé à la prochaine connexion.
+            user.delete().catchError((Object _) => _auth.signOut());
+            return;
+          }
+          if (data['disabled'] == true) {
             _auth.signOut();
             return;
           }
