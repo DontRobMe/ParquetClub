@@ -3,6 +3,7 @@
 | Document | Contenu |
 |---|---|
 | [Cahier des charges](cahier-des-charges.pdf) | Version finale du 20 novembre 2026 : besoins, fonctionnalités et priorités, plateformes, architecture, données et règles, sécurité, RGPD, identité visuelle |
+| [Support de soutenance](soutenance.pptx) | Présentation de 15 minutes, notes de l'orateur et annexes de réserve |
 | [Schéma d'architecture](architecture.png) | Vue → Cubit → Repository → Firebase (forfait Spark) et téléphone ; source : [architecture.html](architecture.html) |
 | [Planche de la maquette](maquette/planche.png) | Lancement, annuaire public, invitation partenaire, suivi par le bureau |
 | [Prototype interactif](maquette/parquet-prototype.html) | Maquette cliquable, à ouvrir dans un navigateur après téléchargement. Le ballon y tient la place du logo définitif |
