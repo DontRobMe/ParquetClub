@@ -24,7 +24,9 @@ export async function preparerComptes(client) {
 export async function appliquerComptes(client, comptes) {
   const motsDePasse = {
     bureau: `Demo!${randomBytes(12).toString('hex')}A2`,
-    partenaires: `Presta!${randomBytes(8).toString('hex')}A2`,
+    // Comptes de démo partenaires : mot de passe court et connu, pour les essais et l'oral.
+    // Le bureau garde un mot de passe aléatoire : le dépôt est public, l'accès admin ne doit pas l'être.
+    partenaires: 'presta',
   };
   for (const { localId, email, existe } of comptes) {
     const password = email === comptesDemo[0].email ? motsDePasse.bureau : motsDePasse.partenaires;
