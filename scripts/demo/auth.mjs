@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { comptesDemo, projet } from './seed.mjs';
 
 const racine = `/projects/${projet}/accounts`;
@@ -23,9 +22,9 @@ export async function preparerComptes(client) {
 
 export async function appliquerComptes(client, comptes) {
   const motsDePasse = {
-    bureau: `Demo!${randomBytes(12).toString('hex')}A2`,
-    // Comptes de démo partenaires : mot de passe court et connu, pour les essais et l'oral.
-    // Le bureau garde un mot de passe aléatoire : le dépôt est public, l'accès admin ne doit pas l'être.
+    // Mots de passe courts et connus, pour les essais et l'oral (6 caractères, minimum de Firebase).
+    // Attention : écrits dans un dépôt public ; changer le mot de passe du bureau avant toute vraie mise en service.
+    bureau: 'bureau',
     partenaires: 'presta',
   };
   for (const { localId, email, existe } of comptes) {
